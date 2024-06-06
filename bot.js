@@ -1,23 +1,28 @@
 require("dotenv").config();
 const { Telegraf, Markup } = require("telegraf");
+const rateLimit = require("telegraf-ratelimit");
 const mongoose = require("mongoose");
 const Poll = require("./models/poll");
 const User = require("./models/user");
-const Channel = require("./models/channel");
-
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
-let commands = `Available commands:
-/start - Start the bot
-/createpoll <title> - Create a new poll with the given title
-/addoption <poll_id> <option_text> - Add an option to the specified poll
-/publishpoll <poll_id> - Publish the specified poll
-/deletepoll <poll_id> - Delete the specified poll
-/addchannel <channel_id> <channel_name> - Add the specified channel to the list of subscribed channels
-/removechannel <channel_id> - Delete the specified channel from the list of subscribed channels
-/listchannels - List all subscribed channels
-/listpolls - List all polls
-`;
+// const limitConfig = {
+//   window: 3000,
+//   limit: 1,
+//   onLimitExceeded: (ctx, next) => ctx.reply("Rate limit exceeded"),
+// };
+
+// bot.use(rateLimit(limitConfig));
+
+const adminKeyboards = [["Create Poll", "List Polls"]];
+const userKeyboards = [["Vote"]];
+
+const checkIsAdmin = async (ctx, next) => {
+  if (ctx.from.id !== parseInt(process.env.ADMIN_CHAT_ID, 10)) {
+    return await ctx.reply("You are not authorized to use this command.");
+  }
+  return await next();
+};
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGODB_URI).then(() => {
@@ -26,18 +31,30 @@ mongoose.connect(process.env.MONGODB_URI).then(() => {
 
 // Utility function to check if a user is subscribed to required channels
 async function isUserSubscribed(ctx) {
-  const channels = await Channel.find({});
-  const userId = ctx.from.id;
-  for (const channel of channels) {
-    const chatMember = await ctx.telegram.getChatMember(
-      channel.channelId,
-      userId,
-    );
-    if (chatMember.status === "left" || chatMember.status === "kicked") {
-      return false;
-    }
+  const chatMember = await ctx.telegram.getChatMember(
+    process.env.TRACKED_CHANNEL,
+    ctx.from.id,
+  );
+  if (chatMember.status === "left" || chatMember.status === "kicked") {
+    return false;
   }
   return true;
+}
+
+async function isBotAdminInChannel(ctx, next) {
+  const chatMember = await ctx.telegram.getChatMember(
+    process.env.TRACKED_CHANNEL,
+    ctx.botInfo.id,
+  );
+  if (
+    !chatMember.status === "administrator" ||
+    !chatMember.status === "creator"
+  ) {
+    await ctx.reply(
+      "You need to be an admin in the channel to use this command.",
+    );
+  }
+  return await next();
 }
 
 // Request contact info
@@ -55,24 +72,26 @@ bot.command("start", async (ctx) => {
     if (ctx.from.id !== parseInt(process.env.ADMIN_CHAT_ID, 10)) {
       await ctx.reply("Welcome!", {
         reply_markup: {
-          keyboard: [
-            [
-              {
-                text: "Vote",
-              },
-            ],
-          ],
+          keyboard: userKeyboards,
           resize_keyboard: true,
         },
       });
     } else {
       // send all commands available to admin
-      await ctx.reply(commands, {
+      await ctx.reply("Welcome!", {
         reply_markup: {
-          remove_keyboard: true,
+          keyboard: adminKeyboards,
+          resize_keyboard: true,
         },
       });
     }
+    user.step = "";
+    user.tempPollTitle = "";
+    user.tempPollOptions = [];
+    user.tempPollMessageId = null;
+    user.currentPollId = null;
+    user.tempPollOption = "";
+    await user.save();
   }
 });
 
@@ -89,152 +108,661 @@ bot.on("contact", async (ctx) => {
   }
 
   await user.save();
-  ctx.reply("Thank you! Your contact number has been saved.", {
+
+  if (ctx.from.id !== parseInt(process.env.ADMIN_CHAT_ID, 10)) {
+    await ctx.reply("Thank you! Your contact number has been saved.", {
+      reply_markup: {
+        keyboard: [
+          [
+            {
+              text: "Vote",
+            },
+          ],
+        ],
+        resize_keyboard: true,
+      },
+    });
+  } else {
+    await ctx.reply("Thank you! Your contact number has been saved.", {
+      reply_markup: {
+        keyboard: adminKeyboards,
+        resize_keyboard: true,
+      },
+    });
+  }
+});
+
+const voteToPoll = async (ctx) => {
+  const polls = await Poll.find({ active: true }).select("title").lean();
+  if (polls.length === 0) {
+    return ctx.reply("No active polls found.");
+  }
+  const buttons = polls.map((poll) => [
+    Markup.button.callback(poll.title, `poll_${poll._id}`),
+  ]);
+  await ctx.deleteMessage();
+  await ctx.reply(
+    "Select a poll to vote:",
+    Markup.inlineKeyboard(buttons).resize(),
+  );
+};
+
+const listPolls = async (ctx) => {
+  const polls = await Poll.find({}).lean();
+  if (polls.length === 0) {
+    return ctx.reply("No polls found.");
+  }
+
+  // sennd pollList as inline button with publish button next to it and when user click on that button it will toggle active property when publish button is clicked it will publish the poll
+  const buttons = polls.map((poll) => [
+    [
+      Markup.button.callback(
+        `${poll.active ? "✅" : "❌"}-${poll.title}`,
+        `toggle_${poll._id}`,
+      ),
+    ],
+    [
+      Markup.button.callback("👀", `see-poll_${poll._id}`),
+      Markup.button.callback("🗑", `delete-poll_${poll._id}`),
+      Markup.button.callback("🔗", `publish-poll_${poll._id}`),
+    ],
+  ])[0];
+
+  await ctx.reply(`<b>Polls:</b>`, {
+    reply_markup: {
+      inline_keyboard: buttons,
+      resize_keyboard: true,
+    },
+    parse_mode: "HTML",
+  });
+};
+
+const createPoll = async (ctx) => {
+  // wait until click done button
+  await User.findOneAndUpdate(
+    { telegramId: ctx.from.id },
+    {
+      step: "create-poll-title",
+      tempPollMessageId: null,
+      pollOptions: [],
+      tempPollTitle: "",
+    },
+  ).lean();
+
+  await ctx.reply("Enter poll title", {
     reply_markup: {
       keyboard: [
         [
           {
-            text: "Vote",
+            text: "Done ✅",
+          },
+        ],
+        [
+          {
+            text: "Cancel ❌",
           },
         ],
       ],
       resize_keyboard: true,
     },
   });
-});
+};
+
+const clearLastPoll = async (ctx) => {
+  await User.findOneAndUpdate(
+    { telegramId: ctx.from.id },
+    {
+      step: "",
+      tempPollMessageId: null,
+      tempPollOptions: [],
+      tempPollTitle: "",
+      currentPollId: null,
+      tempPollOption: "",
+    },
+  ).lean();
+  await ctx.reply("Poll creation canceled.", {
+    reply_markup: {
+      keyboard: adminKeyboards,
+      resize_keyboard: true,
+    },
+  });
+};
+
+const cancelCommand = async (ctx) => {
+  return await clearLastPoll(ctx);
+  // const user = await User.findOne({ telegramId: ctx.from.id })
+  //   .select("step")
+  //   .lean();
+
+  // switch (user.step) {
+  //   case "create-poll-title":
+  //     await clearLastPoll(ctx);
+  //     break;
+  //   case "create-poll":
+  //     await clearLastPoll(ctx);
+  //     break;
+  //   case "add-option":
+  //     await clearLastPoll(ctx);
+  //     break;
+  //   default:
+  //     return;
+  // }
+};
+
+const addTempPollTitle = async (ctx) => {
+  const { message, edited_message } = ctx.update;
+  let tempPollTitle = message?.text.trim() || edited_message?.text.trim();
+  try {
+    if (!tempPollTitle) {
+      return await ctx.reply("Please enter a poll title.");
+    }
+
+    await User.findOneAndUpdate(
+      { telegramId: ctx.from.id },
+      { tempPollTitle },
+    ).lean();
+  } catch (error) {
+    console.log(error);
+    await ctx.reply("Something went wrong. Please try again later.");
+  }
+};
+
+const saveTempPollTitle = async (ctx) => {
+  try {
+    await User.findOneAndUpdate(
+      {
+        telegramId: ctx.from.id,
+        step: "create-poll-title",
+      },
+      {
+        step: "create-poll",
+        tempPollMessageId: null,
+        tempPollOptions: [],
+      },
+    );
+
+    await ctx.reply("Enter poll post", {
+      reply_markup: {
+        keyboard: [
+          [
+            {
+              text: "Done ✅",
+            },
+          ],
+          [
+            {
+              text: "Cancel ❌",
+            },
+          ],
+        ],
+        resize_keyboard: true,
+      },
+    });
+  } catch (error) {
+    console.log(error);
+    await ctx.reply("Something went wrong. Please try again later.");
+  }
+};
+
+const addPollData = async (ctx, user) => {
+  let tempPollMessageId = null;
+
+  if (ctx.message) {
+    tempPollMessageId = ctx.message.message_id;
+  } else if (ctx.edited_message) {
+    tempPollMessageId = ctx.edited_message.message_id;
+  }
+
+  if (!tempPollMessageId) {
+    return await ctx.reply("Please enter a poll.");
+  }
+
+  try {
+    await User.findOneAndUpdate(
+      { telegramId: user.telegramId },
+      { tempPollMessageId },
+    ).lean();
+  } catch (error) {
+    console.log(error);
+    await ctx.reply("Something went wrong. Please try again later.");
+  }
+};
+
+const savePollData = async (ctx, user) => {
+  // check the message still exist
+  const tempPollMessageId = user.tempPollMessageId;
+  if (!tempPollMessageId) {
+    return await ctx.reply("Please enter a poll.");
+  }
+
+  try {
+    await User.findOneAndUpdate(
+      { telegramId: user.telegramId },
+      { step: "", tempPollMessageId: null, pollOptions: [] },
+    ).lean();
+
+    if (!user.tempPollTitle) {
+      return await ctx.reply("/start at first");
+    }
+
+    await Poll.create({
+      title: user.tempPollTitle,
+      messagsId: tempPollMessageId,
+      options: [],
+    });
+
+    await ctx.reply("Poll created successfully.", {
+      reply_markup: {
+        keyboard: adminKeyboards,
+        resize_keyboard: true,
+      },
+    });
+  } catch (error) {
+    console.log(error);
+    await ctx.reply("Something went wrong. Please try again later.");
+  }
+};
+
+const createPollOption = async (ctx) => {
+  try {
+    const currentPollId = ctx.callbackQuery.data.split("_")[1];
+    const poll = await Poll.findById(currentPollId).lean();
+
+    if (!poll) {
+      return await ctx.reply("Poll not found.");
+    }
+
+    await User.findOneAndUpdate(
+      { telegramId: ctx.from.id },
+      {
+        step: "add-option",
+        currentPollId,
+      },
+    ).lean();
+
+    await ctx.reply("Enter poll option", {
+      reply_markup: {
+        keyboard: [
+          [
+            {
+              text: "Done ✅",
+            },
+          ],
+          [
+            {
+              text: "Cancel ❌",
+            },
+          ],
+        ],
+        resize_keyboard: true,
+      },
+    });
+  } catch (error) {
+    console.log(error);
+    await ctx.reply("Something went wrong. Please try again later.");
+  }
+};
+
+const addPollOption = async (ctx, user) => {
+  try {
+    const currentPollId = user.currentPollId;
+
+    const poll = await Poll.findById(currentPollId).lean();
+
+    if (!poll) {
+      return await ctx.reply("Poll not found.");
+    }
+
+    const { message, edited_message } = ctx.update;
+
+    let pollOption = message?.text.trim() || edited_message?.text.trim();
+
+    if (!pollOption) {
+      return await ctx.reply("Please enter a poll option.");
+    }
+
+    await User.findOneAndUpdate(
+      { telegramId: ctx.from.id },
+      { tempPollOption: pollOption },
+    ).lean();
+  } catch (error) {
+    console.log(error);
+    await ctx.reply("Something went wrong. Please try again later.");
+  }
+};
+
+const saveTempPollOption = async (ctx) => {
+  try {
+    const user = await User.findOne({ telegramId: ctx.from.id }).lean();
+
+    const currentPollOption = user.tempPollOption;
+
+    if (!currentPollOption) {
+      return await ctx.reply("Please enter a poll option.");
+    }
+
+    const poll = await Poll.findById(user.currentPollId);
+
+    if (!poll) {
+      return await ctx.reply("Poll not found.");
+    }
+
+    poll.options.push({ text: currentPollOption, votes: 0 });
+
+    await poll.save();
+
+    await User.findOneAndUpdate(
+      { telegramId: ctx.from.id },
+      { tempPollOption: "" },
+    ).lean();
+
+    const pollId = poll._id;
+
+    const buttons = poll.options?.map((option, index) => [
+      Markup.button.callback(
+        `(${option.votes}) ${option.text}`,
+        `vote_${pollId}_${index}`,
+      ),
+    ]);
+
+    // add option button
+    buttons.push([
+      Markup.button.callback("➕ Add option", `add-option_${pollId}`),
+    ]);
+
+    // copy poll message
+    await ctx.telegram.copyMessage(ctx.chat.id, ctx.chat.id, poll.messagsId, {
+      reply_markup: {
+        inline_keyboard: buttons,
+      },
+    });
+  } catch (error) {
+    console.log(error);
+    await ctx.reply("Something went wrong. Please try again later.");
+  }
+};
+
+const deletePollOption = async (ctx) => {
+  try {
+    const pollId = ctx.callbackQuery.data.split("_")[1];
+    const poll = await Poll.findById(pollId);
+
+    if (!poll) {
+      return await ctx.reply("Poll not found.");
+    }
+
+    const optionIndex = parseInt(ctx.callbackQuery.data.split("_")[2]);
+
+    poll.options.splice(optionIndex, 1);
+
+    await poll.save();
+
+    // delete all votes for this option in all users
+    await User.updateMany(
+      {
+        votes: { $elemMatch: { pollId, optionIndex } },
+      },
+      {
+        $pull: {
+          votes: { pollId, optionIndex },
+        },
+      },
+    );
+
+    const newPoll = await Poll.findById(pollId).lean();
+
+    const buttons = newPoll.options?.map((option, index) => [
+      Markup.button.callback(
+        `(${option.votes}) ${option.text}`,
+        `vote_${pollId}_${index}`,
+      ),
+      Markup.button.callback("❌", `delete-option_${pollId}_${index}`),
+    ]);
+
+    // add option button
+    buttons.push([
+      Markup.button.callback("➕ Add option", `add-option_${pollId}`),
+    ]);
+
+    // edit current poll message
+    await ctx.editMessageReplyMarkup({
+      inline_keyboard: buttons,
+    });
+  } catch (error) {
+    console.log(error);
+    await ctx.reply("Something went wrong. Please try again later.");
+  }
+};
+
+const doneCommand = async (ctx) => {
+  const user = await User.findOne({ telegramId: ctx.from.id }).lean();
+
+  switch (user.step) {
+    case "create-poll-title":
+      await saveTempPollTitle(ctx);
+      break;
+    case "create-poll":
+      await savePollData(ctx, user);
+      break;
+    case "add-option":
+      await saveTempPollOption(ctx);
+      break;
+    default:
+      break;
+  }
+};
 
 // catch Vote command
 bot.on("text", async (ctx, next) => {
-  if (ctx.message.text === "Vote") {
-    if (ctx.from.id !== parseInt(process.env.ADMIN_CHAT_ID, 10)) {
-      // send all active polls title
-      const polls = await Poll.find({ active: true }).select("title");
-      if (polls.length === 0) {
-        return ctx.reply("No active polls found.");
-      }
-      const buttons = polls.map((poll) => [
-        Markup.button.callback(poll.title, `poll_${poll._id}`),
-      ]);
-      await ctx.deleteMessage();
-      await ctx.reply(
-        "Select a poll to vote:",
-        Markup.inlineKeyboard(buttons).resize(),
-      );
-    }
-  } else {
-    await next();
+  let message = ctx.message.text.trim();
+
+  switch (message) {
+    case "Vote":
+      return await voteToPoll(ctx);
+    case "List Polls":
+      await checkIsAdmin(ctx, next);
+      return await listPolls(ctx);
+    case "Create Poll":
+      await checkIsAdmin(ctx, next);
+      return await createPoll(ctx);
+    case "Cancel ❌":
+      return await cancelCommand(ctx);
+    case "Done ✅":
+      return await doneCommand(ctx);
+    default:
+      break;
+  }
+
+  // const user = await User.findOne({ telegramId: ctx.from.id });
+
+  // if (!user) {
+  //   return await ctx.reply(
+  //     "Please share your contact number to proceed.",
+  //     Markup.keyboard([Markup.button.contactRequest("Share Contact")])
+  //       .oneTime()
+  //       .resize(),
+  //   );
+  // }
+
+  // switch (user.step) {
+  //   case "create-poll":
+  //     return await savePollData(ctx, user);
+  //   case "add-option":
+  //     return await savePollOption(ctx, user);
+  //   default:
+  //     break;
+  // }
+
+  await next();
+});
+
+bot.on(["message", "edited_message"], async (ctx, next) => {
+  const user = await User.findOne({ telegramId: ctx.from.id }).lean();
+
+  if (!user) {
+    return await next();
+  }
+
+  switch (user.step) {
+    case "create-poll-title":
+      await addTempPollTitle(ctx);
+      break;
+    case "create-poll":
+      await addPollData(ctx, user);
+      break;
+    case "add-option":
+      await addPollOption(ctx, user);
+      break;
+    default:
+      return await next();
   }
 });
 
-// Admin Commands
-bot.command("createpoll", async (ctx) => {
-  if (ctx.from.id !== parseInt(process.env.ADMIN_CHAT_ID, 10)) {
-    return ctx.reply("You are not authorized to use this command.");
-  }
-
-  const args = ctx.message.text.split(" ").slice(1);
-  const title = args.join(" ");
-  if (!title) {
-    return ctx.reply("Please provide a title for the poll.");
-  }
-
-  const poll = new Poll({ title, options: [] });
-  await poll.save();
-  ctx.reply(`Poll created with title: ${title} and ID`);
-});
-
-bot.command("addoption", async (ctx) => {
-  if (ctx.from.id !== parseInt(process.env.ADMIN_CHAT_ID, 10)) {
-    return ctx.reply("You are not authorized to use this command.");
-  }
-
-  const args = ctx.message.text.split(" ").slice(1);
-  const pollId = args[0];
-  const optionText = args.slice(1).join(" ");
-  if (!pollId || !optionText) {
-    return ctx.reply("Please provide a poll ID and option text.");
-  }
-
-  const poll = await Poll.findById(pollId);
+const seePoll = async (ctx) => {
+  const pollId = ctx.callbackQuery.data.split("_")[1];
+  const poll = await Poll.findById(pollId).lean();
   if (!poll) {
     return ctx.reply("Poll not found.");
   }
 
-  poll.options.push({ text: optionText, votes: 0 });
-  await poll.save();
-  ctx.reply(`Option added to poll: ${optionText}`);
-});
+  // delete pollList message
+  await ctx.deleteMessage();
 
-bot.command("deletepoll", async (ctx) => {
-  if (ctx.from.id !== parseInt(process.env.ADMIN_CHAT_ID, 10)) {
-    return ctx.reply("You are not authorized to use this command.");
+  const buttons = poll.options?.map((option, index) => [
+    Markup.button.callback(
+      `(${option.votes}) ${option.text}`,
+      `vote_${pollId}_${index}`,
+    ),
+    Markup.button.callback("❌", `delete-option_${pollId}_${index}`),
+  ]);
+
+  // add option button
+  buttons.push([
+    Markup.button.callback("➕ Add option", `add-option_${pollId}`),
+  ]);
+
+  // copy poll message
+  await ctx.telegram.copyMessage(ctx.chat.id, ctx.chat.id, poll.messagsId, {
+    reply_markup: {
+      inline_keyboard: buttons,
+    },
+  });
+
+  if (buttons.length === 0) {
+    await ctx.reply("There are no options yet.");
   }
+};
 
-  const args = ctx.message.text.split(" ").slice(1);
-  const pollId = args[0];
-  if (!pollId) {
-    return ctx.reply("Please provide a poll ID.");
+const deletePoll = async (ctx) => {
+  try {
+    const pollId = ctx.callbackQuery.data.split("_")[1];
+    await Poll.findByIdAndDelete(pollId).lean();
+    await User.updateMany(
+      { votes: { $elemMatch: { pollId } } },
+      {
+        $pull: {
+          votes: { pollId },
+        },
+      },
+    );
+    const polls = await Poll.find({});
+    if (polls.length === 0) {
+      return await ctx.answerCbQuery("No polls found.");
+    }
+    const buttons = polls.map((poll) => [
+      [
+        Markup.button.callback(
+          `${poll.active ? "✅" : "❌"}-${poll.title}`,
+          `toggle_${poll._id}`,
+        ),
+      ],
+      [
+        Markup.button.callback("👀", `see-poll_${poll._id}`),
+        Markup.button.callback("🗑", `delete-poll_${poll._id}`),
+        Markup.button.callback("🔗", `publish-poll_${poll._id}`),
+      ],
+    ])[0];
+    // reply without any words onyl inline button
+    await ctx.editMessageReplyMarkup({
+      inline_keyboard: buttons,
+      resize_keyboard: true,
+    });
+  } catch (error) {
+    console.log(error);
   }
+};
 
-  await Poll.findByIdAndDelete(pollId);
-  ctx.reply("Poll deleted.");
-});
-
-// Channel management commands
-bot.command("addchannel", async (ctx) => {
-  if (ctx.from.id !== parseInt(process.env.ADMIN_CHAT_ID, 10)) {
-    return ctx.reply("You are not authorized to use this command.");
-  }
-
-  const args = ctx.message.text.split(" ").slice(1);
-  const channelId = args[0];
-  const channelName = args.slice(1).join(" ");
-
-  if (!channelId || !channelName) {
-    return ctx.reply("Please provide a channel ID and channel name.");
-  }
-
-  const channel = new Channel({ channelId, name: channelName });
-  await channel.save();
-  ctx.reply(`Channel added: ${channelName}`);
-});
-
-bot.command("removechannel", async (ctx) => {
-  if (ctx.from.id !== parseInt(process.env.ADMIN_CHAT_ID, 10)) {
-    return ctx.reply("You are not authorized to use this command.");
-  }
-
-  const args = ctx.message.text.split(" ").slice(1);
-  const channelId = args[0];
-
-  if (!channelId) {
-    return ctx.reply("Please provide a channel ID.");
-  }
-
-  await Channel.findOneAndDelete({ channelId });
-  ctx.reply("Channel removed.");
-});
-
-bot.command("listchannels", async (ctx) => {
-  if (ctx.from.id !== parseInt(process.env.ADMIN_CHAT_ID, 10)) {
-    return ctx.reply("You are not authorized to use this command.");
-  }
-
-  const channels = await Channel.find({});
-  if (channels.length === 0) {
-    return ctx.reply("No channels found.");
-  }
-
-  const channelList = channels
-    .map((channel) => `${channel.name} (${channel.channelId})`)
-    .join("\n");
-  ctx.reply(`Channels:\n${channelList}`);
-});
-
-// User Commands
-bot.action(/poll_(.+)/, async (ctx) => {
-  const pollId = ctx.match[1];
+const tooglePoll = async (ctx) => {
+  const pollId = ctx.callbackQuery.data.split("_")[1];
   const poll = await Poll.findById(pollId);
+  if (!poll) {
+    return ctx.reply("Poll not found.");
+  }
+  poll.active = !poll.active;
+  await poll.save();
+  const polls = await Poll.find({}).lean();
+  if (polls.length === 0) {
+    return ctx.reply("No polls found.");
+  }
+  const buttons = polls.map((poll) => [
+    [
+      Markup.button.callback(
+        `${poll.active ? "✅" : "❌"}-${poll.title}`,
+        `toggle_${poll._id}`,
+      ),
+    ],
+    [
+      Markup.button.callback("👀", `see-poll_${poll._id}`),
+      Markup.button.callback("🗑", `delete-poll_${poll._id}`),
+      Markup.button.callback("🔗", `publish-poll_${poll._id}`),
+    ],
+  ])[0];
+  // reply without any words onyl inline button
+  await ctx.editMessageReplyMarkup({
+    inline_keyboard: buttons,
+    resize_keyboard: true,
+  });
+};
+
+const publishPoll = async (ctx) => {
+  const pollId = ctx.callbackQuery.data.split("_")[1];
+
+  //  send poll to channel
+  const poll = await Poll.findById(pollId).lean();
+
+  if (!poll) {
+    return await ctx.reply("Poll not found.");
+  }
+
+  if (!poll.active) {
+    return await ctx.reply("Poll not active.");
+  }
+
+  const buttons = poll.options.map((option, index) => [
+    Markup.button.url(
+      `(${option.votes}) ${option.text}`,
+      `https://t.me/${ctx.botInfo.username}?start=vote_${pollId}_${index}`,
+    ),
+  ]);
+
+  await ctx.telegram.copyMessage(
+    process.env.TRACKED_CHANNEL,
+    ctx.chat.id,
+    poll.messagsId,
+    {
+      reply_markup: {
+        inline_keyboard: buttons,
+      },
+    },
+  );
+
+  await ctx.reply("Poll published to channel.");
+};
+
+// user functions
+const choosePoll = async (ctx) => {
+  const pollId = ctx.callbackQuery.data.split("_")[1];
+  const poll = await Poll.findById(pollId).lean();
   if (!poll) {
     return ctx.answerCbQuery("Poll not found.");
   }
@@ -266,32 +794,146 @@ bot.action(/poll_(.+)/, async (ctx) => {
       ]),
     },
   });
-});
+};
 
-bot.action(/vote_(.+)/, async (ctx) => {
-  const args = ctx.match[1].split("_");
-  const pollId = args[0];
-  const optionIndex = parseInt(args[1]);
+const votePoll = async (ctx) => {
+  // get pollId and optionIndex
+  try {
+    const args = ctx.callbackQuery.data.split("_").slice(1);
+    const pollId = args[0];
+    const optionIndex = parseInt(args[1]);
 
-  if (!pollId || isNaN(optionIndex)) {
-    return ctx.answerCbQuery("Invalid arguments.");
+    if (!pollId || isNaN(optionIndex)) {
+      return await ctx.answerCbQuery("Invalid arguments.");
+    }
+
+    const poll = await Poll.findById(pollId);
+
+    if (!poll) {
+      return await ctx.answerCbQuery("Poll not found.");
+    }
+
+    if (optionIndex < 0 || optionIndex >= poll.options.length) {
+      return await ctx.answerCbQuery("Invalid option index.");
+    }
+
+    if (!poll.active) {
+      // delete all previous messages
+      return await ctx.answerCbQuery("Poll is not active.");
+    }
+
+    const user = await User.findOne({ telegramId: ctx.from.id });
+
+    if (!user) {
+      return await ctx.reply(
+        "Please share your contact number to proceed.",
+        Markup.keyboard([Markup.button.contactRequest("Share Contact")])
+          .oneTime()
+          .resize(),
+      );
+    }
+
+    if (ctx.from.id !== parseInt(process.env.ADMIN_CHAT_ID, 10)) {
+      if (!(await isUserSubscribed(ctx))) {
+        return await ctx.reply(
+          "❗️Илтимос, сўровномада иштирок этиш учун қуйидаги 1 та каналга аъзо бўлинг.",
+          {
+            reply_markup: {
+              inline_keyboard: [
+                [
+                  Markup.button.url(
+                    "Каналга обуна бўлиш",
+                    `https://t.me/${process.env.TRACKED_CHANNEL.split("@")[1]}`,
+                  ),
+                  Markup.button.callback("✅ Обуна бўлдим", `subscribe`),
+                ],
+              ],
+              resize_keyboard: true,
+            },
+          },
+        );
+      }
+    }
+
+    const existingVote = user.votes.find((vote) => vote.pollId === pollId);
+
+    if (existingVote) {
+      if (existingVote.optionIndex !== optionIndex) {
+        poll.options[existingVote.optionIndex].votes -= 1;
+        user.votes = user.votes.map((vote) => {
+          if (vote.pollId === pollId) {
+            vote.optionIndex = optionIndex;
+          }
+          return vote;
+        });
+        poll.options[optionIndex].votes += 1;
+      } else {
+        user.votes = user.votes.filter((vote) => vote.pollId !== pollId);
+        poll.options[existingVote.optionIndex].votes -= 1;
+      }
+    } else {
+      user.votes.push({ pollId, optionIndex });
+      poll.options[optionIndex].votes += 1;
+    }
+
+    await user.save();
+
+    await poll.save();
+
+    await ctx.answerCbQuery(
+      `You ${existingVote ? "un" : ""}voted for option: ${
+        poll.options[optionIndex].text
+      }`,
+    );
+
+    let buttons = [];
+
+    if (ctx.from.id == process.env.ADMIN_CHAT_ID) {
+      buttons = poll.options.map((option, index) => [
+        Markup.button.callback(
+          `(${option.votes}) ${option.text}`,
+          `vote_${pollId}_${index}`,
+        ),
+        Markup.button.callback("❌", `delete-option_${pollId}_${index}`),
+      ]);
+    } else {
+      const newExistingVote = user.votes.find((vote) => vote.pollId === pollId);
+
+      buttons = pool.options.map((option, index) => [
+        Markup.button.callback(
+          `${option.text} (${option.votes}) ${
+            newExistingVote && newExistingVote.optionIndex === index
+              ? " ✅"
+              : ""
+          }`,
+          `vote_${pollId}_${index}`,
+        ),
+      ]);
+    }
+
+    buttons.push([
+      Markup.button.callback("➕ Add option", `add-option_${pollId}`),
+    ]);
+
+    // edit current poll message
+    await ctx.editMessageReplyMarkup({
+      inline_keyboard: buttons,
+    });
+  } catch (error) {
+    console.log(error);
+    ctx.answerCbQuery("Something went wrong. Please try again later.");
   }
+};
 
-  const poll = await Poll.findById(new mongoose.Types.ObjectId(pollId));
+// Admin actions
+bot.action(/see-poll_/, checkIsAdmin, seePoll);
+bot.action(/delete-poll_/, checkIsAdmin, deletePoll);
+bot.action(/toggle_/, checkIsAdmin, tooglePoll);
+bot.action(/publish-poll_/, checkIsAdmin, isBotAdminInChannel, publishPoll);
+bot.action(/add-option_/, checkIsAdmin, createPollOption);
+bot.action(/delete-option_/, checkIsAdmin, deletePollOption);
 
-  if (!poll) {
-    return ctx.answerCbQuery("Poll not found.");
-  }
-
-  if (optionIndex < 0 || optionIndex >= poll.options.length) {
-    return ctx.answerCbQuery("Invalid option index.");
-  }
-
-  if (!poll.active) {
-    // delete all previous messages
-    return ctx.answerCbQuery("Poll is not active.");
-  }
-
+const subscribe = async (ctx) => {
   const user = await User.findOne({ telegramId: ctx.from.id });
 
   if (!user) {
@@ -303,166 +945,46 @@ bot.action(/vote_(.+)/, async (ctx) => {
     );
   }
 
-  if (!(await isUserSubscribed(ctx))) {
-    return ctx.answerCbQuery(
-      "You must be subscribed to the required channels to vote.",
+  const subscribed = await isUserSubscribed(ctx);
+
+  if (!subscribed) {
+    await ctx.reply(
+      "❗️Илтимос, сўровномада иштирок этиш учун қуйидаги 1 та каналга аъзо бўлинг.",
     );
+    return await ctx.reply("Каналга обуна бўлиш", {
+      reply_markup: {
+        inline_keyboard: [
+          [
+            Markup.button.url(
+              "Каналга обуна бўлиш",
+              `https://t.me/${process.env.TRACKED_CHANNEL.split("@")[1]}`,
+            ),
+            Markup.button.callback("✅ Обуна бўлдим", `subscribe`),
+          ],
+        ],
+        resize_keyboard: true,
+      },
+    });
   }
 
-  const existingVote = user.votes.find((vote) => vote.pollId === pollId);
-
-  if (existingVote) {
-    poll.options[existingVote.optionIndex].votes -= 1;
-    user.votes = user.votes.filter((vote) => vote.pollId.toString() !== pollId);
-  } else {
-    user.votes.push({ pollId, optionIndex });
-    poll.options[optionIndex].votes += 1;
-  }
-
-  await user.save();
-  await poll.save();
-  await ctx.answerCbQuery(
-    `You ${existingVote ? "un" : ""}voted for option: ${
-      poll.options[optionIndex].text
-    }`,
-  );
-
-  const newPool = await Poll.findById(new mongoose.Types.ObjectId(pollId));
-  const newExistingVote = user.votes.find(
-    (vote) => vote.pollId.toString() === pollId,
-  );
-
-  const buttons = newPool.options.map((option, index) => [
-    Markup.button.callback(
-      `${option.text} (${option.votes}) ${
-        newExistingVote && newExistingVote.optionIndex === index ? " ✅" : ""
-      }`,
-      `vote_${pollId}_${index}`,
-    ),
-  ]);
-  // edit poll message with new vote
-
-  await ctx.editMessageText(newPool.title, {
-    reply_markup: {
-      inline_keyboard: buttons,
-    },
-  });
-});
-
-// Creating a poll with inline buttons and share button
-bot.command("publishpoll", async (ctx) => {
-  if (ctx.from.id !== parseInt(process.env.ADMIN_CHAT_ID, 10)) {
-    return ctx.reply("You are not authorized to use this command.");
-  }
-
-  const args = ctx.message.text.split(" ").slice(1);
-  const pollId = args[0];
-  if (!pollId) {
-    return ctx.reply("Please provide a poll ID.");
-  }
-
-  const poll = await Poll.findById(pollId);
-  if (!poll) {
-    return ctx.reply("Poll not found.");
-  }
-
-  const buttons = poll.options.map((option, index) => [
-    Markup.button.callback(option.text, `vote_${pollId}_${index}`),
-  ]);
-
-  buttons.push([
-    Markup.button.url(
-      "Share this poll",
-      `https://t.me/${ctx.botInfo.username}?start=vote_${pollId}`,
-    ),
-  ]);
-
-  await ctx.reply(poll.title, Markup.inlineKeyboard(buttons).resize());
-});
-
-// List all polls
-bot.command("listpolls", async (ctx) => {
-  const polls = await Poll.find({});
-  if (polls.length === 0) {
-    return ctx.reply("No polls found.");
-  }
-
-  // sennd pollList as inline button with publish button next to it and when user click on that button it will toggle active property when publish button is clicked it will publish the poll
-  const buttons = polls.map((poll) => [
-    Markup.button.callback(
-      `${poll.title}-${poll.active ? "✅" : "❌"}`,
-      `toggle_${poll._id}`,
-    ),
-    Markup.button.callback("🔗", `publishpoll_${poll._id}`),
-  ]);
-  await ctx.reply("Polls:", {
-    reply_markup: {
-      inline_keyboard: buttons,
-      resize_keyboard: true,
-    },
-  });
-});
-
-bot.action(/toggle_(.+)/, async (ctx) => {
-  const pollId = ctx.match[1];
-  const poll = await Poll.findById(pollId);
-  if (!poll) {
-    return ctx.reply("Poll not found.");
-  }
-  poll.active = !poll.active;
-  await poll.save();
-  // delete pollList message
   await ctx.deleteMessage();
-  const polls = await Poll.find({});
-  if (polls.length === 0) {
-    return ctx.reply("No polls found.");
-  }
-  const buttons = polls.map((poll) => [
-    Markup.button.callback(
-      `${poll.title}-${poll.active ? "✅" : "❌"}`,
-      `toggle_${poll._id}`,
-    ),
-    Markup.button.callback("🔗", `publishpoll_${poll._id}`),
-  ]);
-  // reply without any words onyl inline button
-  await ctx.reply("Polls:", Markup.inlineKeyboard(buttons).oneTime().resize());
-});
+};
 
-bot.action(/publishpoll_(.+)/, async (ctx) => {
-  const pollId = ctx.match[1];
-  const poll = await Poll.findById(pollId);
-  if (!poll) {
-    return ctx.reply("Poll not found.");
-  }
+// User actions
+bot.action(/poll_/, choosePoll);
+bot.action(/vote_/, votePoll);
+bot.action(/subscribe/, subscribe);
 
-  poll.active = true;
-  await poll.save();
-
-  // delete pollList message
-  await ctx.deleteMessage();
-
-  // switch inline query to poll
-  // https://core.telegram.org/bots/api#answerinlinequery
-
-  const buttons = poll.options.map((option) => [
-    Markup.button.url(
-      option.text,
-      `https://t.me/${ctx.botInfo.username}?start=vote_${pollId}`,
-    ),
-  ]);
-
-  await ctx.reply(
-    poll.title,
-    Markup.inlineKeyboard(buttons).oneTime().resize(),
-  );
-});
+bot.telegram.setMyCommands([
+  { command: "start", description: "Start | Restart" },
+]);
 
 // Handling deep links
 bot.start(async (ctx) => {
   const deepLink = ctx.startPayload; // This contains the part after t.me/bot?start=
   if (deepLink.startsWith("vote")) {
     const [_, pollId] = deepLink.split("_");
-    const poll = await Poll.findById(pollId);
+    const poll = await Poll.findById(pollId).lean();
     if (poll) {
       const buttons = poll.options.map((option, index) => [
         Markup.button.callback(option.text, `vote_${pollId}_${index}`),

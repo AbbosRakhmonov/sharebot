@@ -9,6 +9,18 @@ const userSchema = new mongoose.Schema({
     },
   ],
   phoneNumber: { type: String },
+  step: String,
+  tempPollTitle: { type: String },
+  tempPollMessageId: {
+    type: Number,
+    default: null,
+  },
+  tempPollOptions: [],
+  tempPollOption: { type: String },
+  currentPollId: {
+    type: mongoose.Schema.Types.ObjectId,
+    default: null,
+  },
 });
 
 module.exports = mongoose.model("User", userSchema);

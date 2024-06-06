@@ -1,7 +1,14 @@
 const mongoose = require("mongoose");
 
 const pollSchema = new mongoose.Schema({
-  title: { type: String, required: true },
+  title: {
+    type: String,
+    required: true,
+  },
+  messagsId: {
+    type: Number,
+    required: true,
+  },
   options: [
     {
       text: String,
