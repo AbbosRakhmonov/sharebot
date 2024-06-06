@@ -63,26 +63,31 @@ bot.command("start", async (ctx) => {
   const user = await User.findOne({ telegramId: ctx.from.id });
   if (!user) {
     await ctx.reply(
-      "Welcome! Please share your contact number to proceed.",
-      Markup.keyboard([Markup.button.contactRequest("Share Contact")])
-        .oneTime()
-        .resize(),
+      "Ботдан фойдаланиш учун пастдаги <b><i>Share Contact</i></b> тугмасини босинг 👇",
+      {
+        reply_markup: Markup.keyboard([Markup.button.contactRequest("Share Contact")])
+          .oneTime()
+          .resize(),
+        parse_mode: "HTML",
+      },
     );
   } else {
     if (ctx.from.id !== parseInt(process.env.ADMIN_CHAT_ID, 10)) {
-      await ctx.reply("Welcome!", {
+      await ctx.reply("<b>Ассалому Алайкум.</b>\nСўровнома ботга ҳуш келибсиз!", {
         reply_markup: {
           keyboard: userKeyboards,
           resize_keyboard: true,
         },
+        parse_mode: "HTML",
       });
     } else {
       // send all commands available to admin
-      await ctx.reply("Welcome!", {
+      await ctx.reply("<b>Ассалому Алайкум.</b>\nAdmin ботга ҳуш келибсиз", {
         reply_markup: {
           keyboard: adminKeyboards,
           resize_keyboard: true,
         },
+        parse_mode: "HTML",
       });
     }
     user.step = "";
@@ -110,7 +115,7 @@ bot.on("contact", async (ctx) => {
   await user.save();
 
   if (ctx.from.id !== parseInt(process.env.ADMIN_CHAT_ID, 10)) {
-    await ctx.reply("Thank you! Your contact number has been saved.", {
+    await ctx.reply("<b>Ассалому Алайкум.</b>\nAdmin ботга ҳуш келибсиз!", {
       reply_markup: {
         keyboard: [
           [
@@ -121,13 +126,15 @@ bot.on("contact", async (ctx) => {
         ],
         resize_keyboard: true,
       },
+      parse_mode: "HTML",
     });
   } else {
-    await ctx.reply("Thank you! Your contact number has been saved.", {
+    await ctx.reply("<b>Ассалому Алайкум.</b>\nСўровнома ботга ҳуш келибсиз!", {
       reply_markup: {
         keyboard: adminKeyboards,
         resize_keyboard: true,
       },
+      parse_mode: "HTML",
     });
   }
 });
@@ -135,14 +142,14 @@ bot.on("contact", async (ctx) => {
 const voteToPoll = async (ctx) => {
   const polls = await Poll.find({ active: true }).select("title").lean();
   if (polls.length === 0) {
-    return ctx.reply("No active polls found.");
+    return await ctx.reply("Сўровномалар мавжуд эмас!");
   }
   const buttons = polls.map((poll) => [
     Markup.button.callback(poll.title, `poll_${poll._id}`),
   ]);
   await ctx.deleteMessage();
   await ctx.reply(
-    "Select a poll to vote:",
+    "Сўровномани танланг",
     Markup.inlineKeyboard(buttons).resize(),
   );
 };
@@ -150,7 +157,7 @@ const voteToPoll = async (ctx) => {
 const listPolls = async (ctx) => {
   const polls = await Poll.find({}).lean();
   if (polls.length === 0) {
-    return ctx.reply("No polls found.");
+    return ctx.reply("Сўровномалар мавжуд эмас!");
   }
 
   // sennd pollList as inline button with publish button next to it and when user click on that button it will toggle active property when publish button is clicked it will publish the poll
@@ -168,7 +175,7 @@ const listPolls = async (ctx) => {
     ],
   ])[0];
 
-  await ctx.reply(`<b>Polls:</b>`, {
+  await ctx.reply(`<b>Сўровномалар:</b>`, {
     reply_markup: {
       inline_keyboard: buttons,
       resize_keyboard: true,
@@ -189,7 +196,7 @@ const createPoll = async (ctx) => {
     },
   ).lean();
 
-  await ctx.reply("Enter poll title", {
+  await ctx.reply("Сўровноманинг номини юборинг", {
     reply_markup: {
       keyboard: [
         [
@@ -220,7 +227,7 @@ const clearLastPoll = async (ctx) => {
       tempPollOption: "",
     },
   ).lean();
-  await ctx.reply("Poll creation canceled.", {
+  await ctx.reply("Сўровнома бекор қилинди", {
     reply_markup: {
       keyboard: adminKeyboards,
       resize_keyboard: true,
@@ -254,7 +261,7 @@ const addTempPollTitle = async (ctx) => {
   let tempPollTitle = message?.text.trim() || edited_message?.text.trim();
   try {
     if (!tempPollTitle) {
-      return await ctx.reply("Please enter a poll title.");
+      return await ctx.reply("Илтимос сўровнома номини юборинг");
     }
 
     await User.findOneAndUpdate(
@@ -263,7 +270,7 @@ const addTempPollTitle = async (ctx) => {
     ).lean();
   } catch (error) {
     console.log(error);
-    await ctx.reply("Something went wrong. Please try again later.");
+    await ctx.reply("Хатолик. Кайтадан уриниб кўринг");
   }
 };
 
@@ -281,7 +288,7 @@ const saveTempPollTitle = async (ctx) => {
       },
     );
 
-    await ctx.reply("Enter poll post", {
+    await ctx.reply("Сўровномани узини юборинг", {
       reply_markup: {
         keyboard: [
           [
@@ -300,7 +307,7 @@ const saveTempPollTitle = async (ctx) => {
     });
   } catch (error) {
     console.log(error);
-    await ctx.reply("Something went wrong. Please try again later.");
+    await ctx.reply("Хатолик. Кайтадан уриниб кўринг");
   }
 };
 
@@ -314,7 +321,7 @@ const addPollData = async (ctx, user) => {
   }
 
   if (!tempPollMessageId) {
-    return await ctx.reply("Please enter a poll.");
+    return await ctx.reply("Илтимос сўровнома вариантини юборинг");
   }
 
   try {
@@ -324,7 +331,7 @@ const addPollData = async (ctx, user) => {
     ).lean();
   } catch (error) {
     console.log(error);
-    await ctx.reply("Something went wrong. Please try again later.");
+    await ctx.reply("Хатолик. Кайтадан уриниб кўринг");
   }
 };
 
@@ -332,7 +339,7 @@ const savePollData = async (ctx, user) => {
   // check the message still exist
   const tempPollMessageId = user.tempPollMessageId;
   if (!tempPollMessageId) {
-    return await ctx.reply("Please enter a poll.");
+    return await ctx.reply("Илтимос сўровномани узини юборинг");
   }
 
   try {
@@ -342,7 +349,7 @@ const savePollData = async (ctx, user) => {
     ).lean();
 
     if (!user.tempPollTitle) {
-      return await ctx.reply("/start at first");
+      return await ctx.reply("/start бўйругини босинг");
     }
 
     await Poll.create({
@@ -351,7 +358,7 @@ const savePollData = async (ctx, user) => {
       options: [],
     });
 
-    await ctx.reply("Poll created successfully.", {
+    await ctx.reply("Сўровнома мўваффаккиятли яратилди", {
       reply_markup: {
         keyboard: adminKeyboards,
         resize_keyboard: true,
@@ -359,7 +366,7 @@ const savePollData = async (ctx, user) => {
     });
   } catch (error) {
     console.log(error);
-    await ctx.reply("Something went wrong. Please try again later.");
+    await ctx.reply("Хатолик. Кайтадан уриниб кўринг");
   }
 };
 
@@ -369,7 +376,7 @@ const createPollOption = async (ctx) => {
     const poll = await Poll.findById(currentPollId).lean();
 
     if (!poll) {
-      return await ctx.reply("Poll not found.");
+      return await ctx.reply("Сўровнома топилмади");
     }
 
     await User.findOneAndUpdate(
@@ -380,7 +387,7 @@ const createPollOption = async (ctx) => {
       },
     ).lean();
 
-    await ctx.reply("Enter poll option", {
+    await ctx.reply("Сўровномани вариантини юборинг", {
       reply_markup: {
         keyboard: [
           [
@@ -399,7 +406,7 @@ const createPollOption = async (ctx) => {
     });
   } catch (error) {
     console.log(error);
-    await ctx.reply("Something went wrong. Please try again later.");
+    await ctx.reply("Хатолик. Кайтадан уриниб кўринг");
   }
 };
 
@@ -410,7 +417,7 @@ const addPollOption = async (ctx, user) => {
     const poll = await Poll.findById(currentPollId).lean();
 
     if (!poll) {
-      return await ctx.reply("Poll not found.");
+      return await ctx.reply("Сўровнома топилмади");
     }
 
     const { message, edited_message } = ctx.update;
@@ -418,7 +425,7 @@ const addPollOption = async (ctx, user) => {
     let pollOption = message?.text.trim() || edited_message?.text.trim();
 
     if (!pollOption) {
-      return await ctx.reply("Please enter a poll option.");
+      return await ctx.reply("Сўровномани вариантини юборинг");
     }
 
     await User.findOneAndUpdate(
@@ -427,7 +434,7 @@ const addPollOption = async (ctx, user) => {
     ).lean();
   } catch (error) {
     console.log(error);
-    await ctx.reply("Something went wrong. Please try again later.");
+    await ctx.reply("Хатолик. Кайтадан уриниб кўринг");
   }
 };
 
@@ -438,13 +445,13 @@ const saveTempPollOption = async (ctx) => {
     const currentPollOption = user.tempPollOption;
 
     if (!currentPollOption) {
-      return await ctx.reply("Please enter a poll option.");
+      return await ctx.reply("Сўровномани вариантини юборинг");
     }
 
     const poll = await Poll.findById(user.currentPollId);
 
     if (!poll) {
-      return await ctx.reply("Poll not found.");
+      return await ctx.reply("Сўровнома топилмади");
     }
 
     poll.options.push({ text: currentPollOption, votes: 0 });
@@ -478,7 +485,7 @@ const saveTempPollOption = async (ctx) => {
     });
   } catch (error) {
     console.log(error);
-    await ctx.reply("Something went wrong. Please try again later.");
+    await ctx.reply("Хатолик. Кайтадан уриниб кўринг");
   }
 };
 
@@ -488,7 +495,7 @@ const deletePollOption = async (ctx) => {
     const poll = await Poll.findById(pollId);
 
     if (!poll) {
-      return await ctx.reply("Poll not found.");
+      return await ctx.reply("Сўровнома топилмади");
     }
 
     const optionIndex = parseInt(ctx.callbackQuery.data.split("_")[2]);
@@ -530,7 +537,7 @@ const deletePollOption = async (ctx) => {
     });
   } catch (error) {
     console.log(error);
-    await ctx.reply("Something went wrong. Please try again later.");
+    await ctx.reply("Хатолик. Кайтадан уриниб кўринг");
   }
 };
 
@@ -622,7 +629,7 @@ const seePoll = async (ctx) => {
   const pollId = ctx.callbackQuery.data.split("_")[1];
   const poll = await Poll.findById(pollId).lean();
   if (!poll) {
-    return ctx.reply("Poll not found.");
+    return ctx.reply("Сўровнома топилмади");
   }
 
   // delete pollList message
@@ -649,7 +656,7 @@ const seePoll = async (ctx) => {
   });
 
   if (buttons.length === 0) {
-    await ctx.reply("There are no options yet.");
+    await ctx.reply("Вариантлар мавжуд эмас");
   }
 };
 
@@ -667,7 +674,7 @@ const deletePoll = async (ctx) => {
     );
     const polls = await Poll.find({});
     if (polls.length === 0) {
-      return await ctx.answerCbQuery("No polls found.");
+      return await ctx.answerCbQuery("Сўровнома топилмади");
     }
     const buttons = polls.map((poll) => [
       [
@@ -696,13 +703,13 @@ const tooglePoll = async (ctx) => {
   const pollId = ctx.callbackQuery.data.split("_")[1];
   const poll = await Poll.findById(pollId);
   if (!poll) {
-    return ctx.reply("Poll not found.");
+    return ctx.reply("Сўровнома топилмади");
   }
   poll.active = !poll.active;
   await poll.save();
   const polls = await Poll.find({}).lean();
   if (polls.length === 0) {
-    return ctx.reply("No polls found.");
+    return ctx.reply("Сўровнома топилмади");
   }
   const buttons = polls.map((poll) => [
     [
@@ -728,14 +735,14 @@ const publishPoll = async (ctx) => {
   const pollId = ctx.callbackQuery.data.split("_")[1];
 
   //  send poll to channel
-  const poll = await Poll.findById(pollId).lean();
+  const poll = await Poll.findById(pollId)
 
   if (!poll) {
-    return await ctx.reply("Poll not found.");
+    return await ctx.reply("Сўровнома топилмади");
   }
 
   if (!poll.active) {
-    return await ctx.reply("Poll not active.");
+    return await ctx.reply("Сўровнома актив эмас");
   }
 
   const buttons = poll.options.map((option, index) => [
@@ -745,7 +752,7 @@ const publishPoll = async (ctx) => {
     ),
   ]);
 
-  await ctx.telegram.copyMessage(
+  const messsage = await ctx.telegram.copyMessage(
     process.env.TRACKED_CHANNEL,
     ctx.chat.id,
     poll.messagsId,
@@ -756,47 +763,63 @@ const publishPoll = async (ctx) => {
     },
   );
 
-  await ctx.reply("Poll published to channel.");
+  // save message id
+  poll.messagsIdInChannel = messsage.message_id;
+  await poll.save();
+
+  await ctx.reply("Сўровнома каналга юборилди");
 };
 
 // user functions
-const choosePoll = async (ctx) => {
-  const pollId = ctx.callbackQuery.data.split("_")[1];
-  const poll = await Poll.findById(pollId).lean();
-  if (!poll) {
-    return ctx.answerCbQuery("Poll not found.");
-  }
-  const user = await User.findOne({ telegramId: ctx.from.id });
+const choosePoll = async (ctx, next) => {
+  try {
+    const pollId = await ctx.callbackQuery.data.split("_")[1];
+    const poll = await Poll.findById(pollId).lean();
+    if (!poll) {
+      return await ctx.reply("Сўровнома топилмади");
+    }
+    const user = await User.findOne({ telegramId: ctx.from.id });
 
-  const existingVote = user.votes.find(
-    (vote) => vote.pollId.toString() === pollId,
-  );
-
-  if (!user) {
-    return await ctx.reply(
-      "Please share your contact number to proceed.",
-      Markup.keyboard([Markup.button.contactRequest("Share Contact")])
-        .oneTime()
-        .resize(),
+    const existingVote = user.votes.find(
+      (vote) => vote.pollId === pollId,
     );
-  }
 
-  ctx.deleteMessage();
-  ctx.reply(poll.title, {
-    reply_markup: {
-      inline_keyboard: poll.options.map((option, index) => [
+    if (!user) {
+      return await ctx.reply(
+        "Ботдан фойдаланиш учун пастдаги <b>Share Contact</b> тугмасини босинг 👇",
         {
-          text: `${option.text} (${option.votes}) ${
-            existingVote && existingVote.optionIndex === index ? " ✅" : ""
-          }`,
-          callback_data: `vote_${pollId}_${index}`,
+          reply_markup: Markup.keyboard([Markup.button.contactRequest("Share Contact")])
+            .oneTime()
+            .resize(),
+          parse_mode: "HTML",
         },
-      ]),
-    },
-  });
+      );
+    }
+
+    let buttons = poll.options.map((option, index) => [
+      Markup.button.callback(
+        `(${option.votes}) ${option.text} ${existingVote && existingVote.optionIndex === index ? " ✅" : ""
+        }`,
+        `vote_${pollId}_${index}`,
+      )
+    ])
+
+    // copy poll message
+    await ctx.telegram.copyMessage(ctx.chat.id, process.env.TRACKED_CHANNEL, poll.messagsIdInChannel, {
+      reply_markup: {
+        inline_keyboard: buttons,
+      },
+    });
+  } catch (error) {
+    console.log(error);
+
+    await ctx.reply("Хатолик: " + error.message);
+  } finally {
+    await next();
+  }
 };
 
-const votePoll = async (ctx) => {
+const votePoll = async (ctx, next) => {
   // get pollId and optionIndex
   try {
     const args = ctx.callbackQuery.data.split("_").slice(1);
@@ -810,7 +833,7 @@ const votePoll = async (ctx) => {
     const poll = await Poll.findById(pollId);
 
     if (!poll) {
-      return await ctx.answerCbQuery("Poll not found.");
+      return await ctx.answerCbQuery("Сўровнома топилмади");
     }
 
     if (optionIndex < 0 || optionIndex >= poll.options.length) {
@@ -819,17 +842,20 @@ const votePoll = async (ctx) => {
 
     if (!poll.active) {
       // delete all previous messages
-      return await ctx.answerCbQuery("Poll is not active.");
+      return await ctx.answerCbQuery("Сўровнома актив эмас");
     }
 
     const user = await User.findOne({ telegramId: ctx.from.id });
 
     if (!user) {
       return await ctx.reply(
-        "Please share your contact number to proceed.",
-        Markup.keyboard([Markup.button.contactRequest("Share Contact")])
-          .oneTime()
-          .resize(),
+        "Ботдан фойдаланиш учун пастдаги <b>Share Contact</b> тугмасини босинг 👇",
+        {
+          reply_markup: Markup.keyboard([Markup.button.contactRequest("Share Contact")])
+            .oneTime()
+            .resize(),
+          parse_mode: "HTML",
+        },
       );
     }
 
@@ -845,8 +871,10 @@ const votePoll = async (ctx) => {
                     "Каналга обуна бўлиш",
                     `https://t.me/${process.env.TRACKED_CHANNEL.split("@")[1]}`,
                   ),
-                  Markup.button.callback("✅ Обуна бўлдим", `subscribe`),
                 ],
+                [
+                  Markup.button.callback("✅ Обуна бўлдим", `subscribe`),
+                ]
               ],
               resize_keyboard: true,
             },
@@ -880,15 +908,9 @@ const votePoll = async (ctx) => {
 
     await poll.save();
 
-    await ctx.answerCbQuery(
-      `You ${existingVote ? "un" : ""}voted for option: ${
-        poll.options[optionIndex].text
-      }`,
-    );
-
     let buttons = [];
 
-    if (ctx.from.id == process.env.ADMIN_CHAT_ID) {
+    if (ctx.from.id === parseInt(process.env.ADMIN_CHAT_ID, 10)) {
       buttons = poll.options.map((option, index) => [
         Markup.button.callback(
           `(${option.votes}) ${option.text}`,
@@ -896,32 +918,45 @@ const votePoll = async (ctx) => {
         ),
         Markup.button.callback("❌", `delete-option_${pollId}_${index}`),
       ]);
+      buttons.push([
+        Markup.button.callback("➕ Add option", `add-option_${pollId}`),
+      ]);
     } else {
       const newExistingVote = user.votes.find((vote) => vote.pollId === pollId);
 
-      buttons = pool.options.map((option, index) => [
+      buttons = poll.options.map((option, index) => [
         Markup.button.callback(
-          `${option.text} (${option.votes}) ${
-            newExistingVote && newExistingVote.optionIndex === index
-              ? " ✅"
-              : ""
+          `(${option.votes}) ${option.text} ${newExistingVote && newExistingVote.optionIndex === index
+            ? " ✅"
+            : ""
           }`,
           `vote_${pollId}_${index}`,
         ),
       ]);
     }
 
-    buttons.push([
-      Markup.button.callback("➕ Add option", `add-option_${pollId}`),
-    ]);
-
     // edit current poll message
     await ctx.editMessageReplyMarkup({
       inline_keyboard: buttons,
     });
+
+    // if messagsIdInChannel is not null, edit message in channel only buttons
+    if (poll.messagsIdInChannel) {
+      let channelButtons = poll.options.map((option, index) => [
+        Markup.button.url(
+          `(${option.votes}) ${option.text}`,
+          `https://t.me/${process.env.TRACKED_CHANNEL.split("@")[1]}/?start=${pollId}_${index}`
+        )
+      ])
+      await ctx.telegram.editMessageReplyMarkup(process.env.TRACKED_CHANNEL, poll.messagsIdInChannel, null, {
+        inline_keyboard: channelButtons
+      })
+    }
   } catch (error) {
     console.log(error);
-    ctx.answerCbQuery("Something went wrong. Please try again later.");
+    ctx.reply("Хатолик");
+  } finally {
+    await next()
   }
 };
 
@@ -938,20 +973,20 @@ const subscribe = async (ctx) => {
 
   if (!user) {
     return await ctx.reply(
-      "Please share your contact number to proceed.",
-      Markup.keyboard([Markup.button.contactRequest("Share Contact")])
-        .oneTime()
-        .resize(),
+      "Ботдан фойдаланиш учун пастдаги <b>Share Contact</b> тугмасини босинг 👇",
+      {
+        reply_markup: Markup.keyboard([Markup.button.contactRequest("Share Contact")])
+          .oneTime()
+          .resize(),
+        parse_mode: "HTML",
+      },
     );
   }
 
   const subscribed = await isUserSubscribed(ctx);
 
   if (!subscribed) {
-    await ctx.reply(
-      "❗️Илтимос, сўровномада иштирок этиш учун қуйидаги 1 та каналга аъзо бўлинг.",
-    );
-    return await ctx.reply("Каналга обуна бўлиш", {
+    return await ctx.reply("❗️Илтимос, сўровномада иштирок этиш учун қуйидаги 1 та каналга аъзо бўлинг.", {
       reply_markup: {
         inline_keyboard: [
           [
@@ -959,8 +994,10 @@ const subscribe = async (ctx) => {
               "Каналга обуна бўлиш",
               `https://t.me/${process.env.TRACKED_CHANNEL.split("@")[1]}`,
             ),
-            Markup.button.callback("✅ Обуна бўлдим", `subscribe`),
           ],
+          [
+            Markup.button.callback("✅ Обуна бўлдим", `subscribe`),
+          ]
         ],
         resize_keyboard: true,
       },
@@ -979,34 +1016,43 @@ bot.telegram.setMyCommands([
   { command: "start", description: "Start | Restart" },
 ]);
 
-// Handling deep links
-bot.start(async (ctx) => {
-  const deepLink = ctx.startPayload; // This contains the part after t.me/bot?start=
-  if (deepLink.startsWith("vote")) {
-    const [_, pollId] = deepLink.split("_");
-    const poll = await Poll.findById(pollId).lean();
-    if (poll) {
-      const buttons = poll.options.map((option, index) => [
-        Markup.button.callback(option.text, `vote_${pollId}_${index}`),
-      ]);
+// // Handling deep links
+// bot.start(async (ctx) => {
+//   const deepLink = ctx.startPayload; // This contains the part after t.me/bot?start=
+//   if (deepLink.startsWith("vote")) {
+//     const [_, pollId] = deepLink.split("_");
+//     const poll = await Poll.findById(pollId).lean();
 
-      buttons.push([
-        Markup.button.url(
-          "Share this poll",
-          `https://t.me/${ctx.botInfo.username}?start=vote_${pollId}`,
-        ),
-      ]);
+//     if(!poll.active){
+//       return await ctx.reply("Poll not active.")
+//     }
 
-      await ctx.reply(poll.title, Markup.inlineKeyboard(buttons).resize());
-    } else {
-      ctx.reply("Poll not found.");
-    }
-  } else {
-    ctx.reply("Welcome! Use /vote to participate in polls.");
-  }
-});
+//     if (poll) {
+//       const buttons = poll.options.map((option, index) => [
+//         Markup.button.callback(option.text, `vote_${pollId}_${index}`),
+//       ]);
 
-bot.launch();
+//       buttons.push([
+//         Markup.button.url(
+//           "Share this poll",
+//           `https://t.me/${ctx.botInfo.username}?start=vote_${pollId}`,
+//         ),
+//       ]);
+
+//       await ctx.copyMessage(ctx.chat.id, poll.messagsId, {
+//         reply_markup: {
+//           inline_keyboard: buttons,
+//         },
+//       });
+//     } else {
+//       ctx.reply("Welcome! Use /vote to participate in polls.");
+//     }
+//   } else {
+//     ctx.reply("Welcome! Use /vote to participate in polls.");
+//   }
+// });
+
+bot.launch(() => console.log("Bot started"));
 
 process.once("SIGINT", () => bot.stop("SIGINT"));
 process.once("SIGTERM", () => bot.stop("SIGTERM"));

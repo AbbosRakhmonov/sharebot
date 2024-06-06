@@ -9,6 +9,7 @@ const pollSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
+  messagsIdInChannel: Number,
   options: [
     {
       text: String,
