@@ -1146,7 +1146,7 @@ mongoose.connect(process.env.MONGODB_URI).then(() => {
 // if production use webhook else polling
 if (process.env.NODE_ENV === "production") {
   bot.telegram.setWebhook(process.env.WEBHOOK_URL);
-  webhookCallback("/api/webhook");
+  bot.webhookCallback("/api/webhook");
 } else {
   bot
     .launch(() => console.log("Bot started"))
