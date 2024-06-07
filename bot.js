@@ -119,7 +119,7 @@ bot.on("contact", async (ctx) => {
   await user.save();
 
   if (ctx.from.id !== parseInt(process.env.ADMIN_CHAT_ID, 10)) {
-    await ctx.reply("<b>Ассалому Алайкум.</b>\nAdmin ботга ҳуш келибсиз!", {
+    await ctx.reply("<b>Ассалому Алайкум.</b>\nСўровнома ботга ҳуш келибсиз!", {
       reply_markup: {
         keyboard: [
           [
@@ -133,7 +133,7 @@ bot.on("contact", async (ctx) => {
       parse_mode: "HTML",
     });
   } else {
-    await ctx.reply("<b>Ассалому Алайкум.</b>\nСўровнома ботга ҳуш келибсиз!", {
+    await ctx.reply("<b>Ассалому Алайкум.</b>\nAdmin ботга ҳуш келибсиз!", {
       reply_markup: {
         keyboard: adminKeyboards,
         resize_keyboard: true,
