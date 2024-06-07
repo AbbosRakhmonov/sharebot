@@ -1,18 +1,10 @@
 require("dotenv").config();
 const { Telegraf, Markup } = require("telegraf");
-const rateLimit = require("telegraf-ratelimit");
 const mongoose = require("mongoose");
 const Poll = require("./models/poll");
 const User = require("./models/user");
+
 const bot = new Telegraf(process.env.BOT_TOKEN);
-
-// const limitConfig = {
-//   window: 3000,
-//   limit: 1,
-//   onLimitExceeded: (ctx, next) => ctx.reply("Rate limit exceeded"),
-// };
-
-// bot.use(rateLimit(limitConfig));
 
 const adminKeyboards = [["Create Poll", "List Polls"]];
 const userKeyboards = [["Vote"]];
@@ -1070,9 +1062,9 @@ bot.action(/poll_/, choosePoll);
 bot.action(/vote_/, votePoll);
 bot.action(/subscribe/, subscribe);
 
-bot.telegram.setMyCommands([
-  { command: "start", description: "Start | Restart" },
-]);
+// bot.telegram.setMyCommands([
+//   { command: "start", description: "Start | Restart" },
+// ]);
 
 // // Handling deep links
 // bot.start(async (ctx) => {
