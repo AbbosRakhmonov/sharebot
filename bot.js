@@ -6,13 +6,15 @@ const User = require("./models/user");
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
-const adminKeyboards = [["Create Poll", "List Polls"]];
-const userKeyboards = [["Vote"]];
+const adminKeyboards = [["Сўровнома яратиш", "Барча сўровномалар"]];
+const userKeyboards = [["Овоз бериш"]];
 
 const checkIsAdmin = async (ctx, next) => {
   try {
     if (ctx.from.id !== parseInt(process.env.ADMIN_CHAT_ID, 10)) {
-      return await ctx.reply("You are not authorized to use this command.");
+      return await ctx.reply(
+        "Сиз ушбу буйруқдан фойдаланиш ҳуқуқига эга эмассиз.",
+      );
     }
     await next();
   } catch (error) {
@@ -32,7 +34,7 @@ async function isUserSubscribed(ctx) {
     }
     return true;
   } catch (error) {
-    console.error("Error checking user subscription:", error);
+    console.error("Фойдаланувчи обунасини текширишда хатолик юз берди:", error);
     return false;
   }
 }
@@ -47,14 +49,12 @@ async function isBotAdminInChannel(ctx, next) {
       !chatMember.status === "administrator" ||
       !chatMember.status === "creator"
     ) {
-      await ctx.reply(
-        "You need to be an admin in the channel to use this command.",
-      );
+      return await ctx.reply("Ботни каналда админ эмас !");
     }
-    return await next();
+    await next();
   } catch (error) {
-    console.error("Error checking bot admin status:", error);
-    await ctx.reply("Error checking bot admin status. Please try again later.");
+    console.error("Ботни каналдаги ўрнини текширишда хатолик:", error);
+    await ctx.reply(`Ботни каналдаги ўрнини текширишда хатолик: ${error}`);
   }
 }
 
@@ -64,10 +64,10 @@ bot.command("start", async (ctx) => {
     const user = await User.findOne({ telegramId: ctx.from.id });
     if (!user) {
       await ctx.reply(
-        "Ботдан фойдаланиш учун пастдаги <b><i>Share Contact</i></b> тугмасини босинг 👇",
+        "Ботдан фойдаланиш учун пастдаги <b><i>☎️ Рақамни юбориш</i></b> тугмасини босинг 👇",
         {
           reply_markup: {
-            keyboard: [[Markup.button.contactRequest("Share Contact")]],
+            keyboard: [[Markup.button.contactRequest("☎️ Рақамни юбориш")]],
             resize_keyboard: true,
           },
           parse_mode: "HTML",
@@ -104,7 +104,7 @@ bot.command("start", async (ctx) => {
     }
   } catch (error) {
     console.error("Error in start command:", error);
-    await ctx.reply("An error occurred. Please try again later.");
+    await ctx.reply("Хатолик. Кайтадан уриниб кўринг /start");
   }
 });
 
@@ -145,13 +145,13 @@ bot.on("contact", async (ctx) => {
     }
   } catch (error) {
     console.error("Error handling contact:", error);
-    await ctx.reply("An error occurred. Please try again later.");
+    await ctx.reply(`Хатолик. Кайтадан уриниб кўринг ${error}`);
   }
 });
 
 bot.catch((err, ctx) => {
-  console.error(`Bot encountered an error for ${ctx.updateType}`, err);
-  ctx.reply("An unexpected error occurred. Please try again later.");
+  console.error(`Ботда ноодатий хатолик юз берди ${ctx.updateType}`, err);
+  ctx.reply("Ботда ноодатий хатолик юз берди, кайтадан уриниб кўринг");
 });
 
 const voteToPoll = async (ctx) => {
@@ -245,7 +245,7 @@ const clearLastPoll = async (ctx) => {
       tempPollOption: "",
     },
   ).lean();
-  await ctx.reply("Сўровнома бекор қилинди", {
+  await ctx.reply("Буйруқ бекор қилинди", {
     reply_markup: {
       keyboard: adminKeyboards,
       resize_keyboard: true,
@@ -585,14 +585,14 @@ bot.on("text", async (ctx, next) => {
   let message = ctx.message.text.trim();
 
   switch (message) {
-    case "Vote":
+    case "Овоз бериш":
       await voteToPoll(ctx);
       break;
-    case "List Polls":
+    case "Барча сўровномалар":
       await checkIsAdmin(ctx, next);
       await listPolls(ctx);
       break;
-    case "Create Poll":
+    case "Сўровнома яратиш":
       await checkIsAdmin(ctx, next);
       await createPoll(ctx);
       break;
@@ -612,7 +612,7 @@ bot.on("text", async (ctx, next) => {
   // if (!user) {
   //   return await ctx.reply(
   //     "Please share your contact number to proceed.",
-  //     Markup.keyboard([Markup.button.contactRequest("Share Contact")])
+  //     Markup.keyboard([Markup.button.contactRequest("☎️ Рақамни юбориш")])
   //       .oneTime()
   //       .resize(),
   //   );
@@ -633,10 +633,10 @@ bot.on(["message", "edited_message"], async (ctx, next) => {
 
   if (!user) {
     return await ctx.reply(
-      "Ботдан фойдаланиш учун пастдаги <b><i>Share Contact</i></b> тугмасини босинг 👇",
+      "Ботдан фойдаланиш учун пастдаги <b><i>☎️ Рақамни юбориш</i></b> тугмасини босинг 👇",
       {
         reply_markup: {
-          keyboard: [[Markup.button.contactRequest("Share Contact")]],
+          keyboard: [[Markup.button.contactRequest("☎️ Рақамни юбориш")]],
           resize_keyboard: true,
         },
         parse_mode: "HTML",
@@ -843,10 +843,10 @@ const choosePoll = async (ctx, next) => {
 
     if (!user) {
       return await ctx.reply(
-        "Ботдан фойдаланиш учун пастдаги <b><i>Share Contact</i></b> тугмасини босинг 👇",
+        "Ботдан фойдаланиш учун пастдаги <b><i>☎️ Рақамни юбориш</i></b> тугмасини босинг 👇",
         {
           reply_markup: {
-            keyboard: [[Markup.button.contactRequest("Share Contact")]],
+            keyboard: [[Markup.button.contactRequest("☎️ Рақамни юбориш")]],
             resize_keyboard: true,
           },
           parse_mode: "HTML",
@@ -911,10 +911,10 @@ const votePoll = async (ctx, next) => {
 
     if (!user) {
       return await ctx.reply(
-        "Ботдан фойдаланиш учун пастдаги <b><i>Share Contact</i></b> тугмасини босинг 👇",
+        "Ботдан фойдаланиш учун пастдаги <b><i>☎️ Рақамни юбориш</i></b> тугмасини босинг 👇",
         {
           reply_markup: {
-            keyboard: [[Markup.button.contactRequest("Share Contact")]],
+            keyboard: [[Markup.button.contactRequest("☎️ Рақамни юбориш")]],
             resize_keyboard: true,
           },
           parse_mode: "HTML",
@@ -1041,10 +1041,10 @@ const subscribe = async (ctx, next) => {
 
     if (!user) {
       return await ctx.reply(
-        "Ботдан фойдаланиш учун пастдаги <b><i>Share Contact</i></b> тугмасини босинг 👇",
+        "Ботдан фойдаланиш учун пастдаги <b><i>☎️ Рақамни юбориш</i></b> тугмасини босинг 👇",
         {
           reply_markup: {
-            keyboard: [[Markup.button.contactRequest("Share Contact")]],
+            keyboard: [[Markup.button.contactRequest("☎️ Рақамни юбориш")]],
             resize_keyboard: true,
           },
           parse_mode: "HTML",
