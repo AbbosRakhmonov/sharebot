@@ -10,70 +10,132 @@ const adminKeyboards = [["Create Poll", "List Polls"]];
 const userKeyboards = [["Vote"]];
 
 const checkIsAdmin = async (ctx, next) => {
-  if (ctx.from.id !== parseInt(process.env.ADMIN_CHAT_ID, 10)) {
-    return await ctx.reply("You are not authorized to use this command.");
+  try {
+    if (ctx.from.id !== parseInt(process.env.ADMIN_CHAT_ID, 10)) {
+      return await ctx.reply("You are not authorized to use this command.");
+    }
+    await next();
+  } catch (error) {
+    console.log(error);
   }
-  return await next();
 };
 
 // Utility function to check if a user is subscribed to required channels
 async function isUserSubscribed(ctx) {
-  const chatMember = await ctx.telegram.getChatMember(
-    process.env.TRACKED_CHANNEL,
-    ctx.from.id,
-  );
-  if (chatMember.status === "left" || chatMember.status === "kicked") {
+  try {
+    const chatMember = await ctx.telegram.getChatMember(
+      process.env.TRACKED_CHANNEL,
+      ctx.from.id,
+    );
+    if (chatMember.status === "left" || chatMember.status === "kicked") {
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error("Error checking user subscription:", error);
     return false;
   }
-  return true;
 }
 
 async function isBotAdminInChannel(ctx, next) {
-  const chatMember = await ctx.telegram.getChatMember(
-    process.env.TRACKED_CHANNEL,
-    ctx.botInfo.id,
-  );
-  if (
-    !chatMember.status === "administrator" ||
-    !chatMember.status === "creator"
-  ) {
-    await ctx.reply(
-      "You need to be an admin in the channel to use this command.",
+  try {
+    const chatMember = await ctx.telegram.getChatMember(
+      process.env.TRACKED_CHANNEL,
+      ctx.botInfo.id,
     );
+    if (
+      !chatMember.status === "administrator" ||
+      !chatMember.status === "creator"
+    ) {
+      await ctx.reply(
+        "You need to be an admin in the channel to use this command.",
+      );
+    }
+    return await next();
+  } catch (error) {
+    console.error("Error checking bot admin status:", error);
+    await ctx.reply("Error checking bot admin status. Please try again later.");
   }
-  return await next();
 }
 
 // Request contact info
 bot.command("start", async (ctx) => {
-  // If user has not registered before, ask for contact info or send just simple message
-  const user = await User.findOne({ telegramId: ctx.from.id });
-  if (!user) {
-    await ctx.reply(
-      "Ботдан фойдаланиш учун пастдаги <b><i>Share Contact</i></b> тугмасини босинг 👇",
-      {
-        reply_markup: {
-          keyboard: [[Markup.button.contactRequest("Share Contact")]],
-          resize_keyboard: true,
-        },
-        parse_mode: "HTML",
-      },
-    );
-  } else {
-    if (ctx.from.id !== parseInt(process.env.ADMIN_CHAT_ID, 10)) {
+  try {
+    const user = await User.findOne({ telegramId: ctx.from.id });
+    if (!user) {
       await ctx.reply(
-        "<b>Ассалому Алайкум.</b>\nСўровнома ботга ҳуш келибсиз!",
+        "Ботдан фойдаланиш учун пастдаги <b><i>Share Contact</i></b> тугмасини босинг 👇",
         {
           reply_markup: {
-            keyboard: userKeyboards,
+            keyboard: [[Markup.button.contactRequest("Share Contact")]],
             resize_keyboard: true,
           },
           parse_mode: "HTML",
         },
       );
     } else {
-      // send all commands available to admin
-      await ctx.reply("<b>Ассалому Алайкум.</b>\nAdmin ботга ҳуш келибсиз", {
+      if (ctx.from.id !== parseInt(process.env.ADMIN_CHAT_ID, 10)) {
+        await ctx.reply(
+          "<b>Ассалому Алайкум.</b>\nСўровнома ботга ҳуш келибсиз!",
+          {
+            reply_markup: {
+              keyboard: userKeyboards,
+              resize_keyboard: true,
+            },
+            parse_mode: "HTML",
+          },
+        );
+      } else {
+        await ctx.reply("<b>Ассалому Алайкум.</b>\nAdmin ботга ҳуш келибсиз", {
+          reply_markup: {
+            keyboard: adminKeyboards,
+            resize_keyboard: true,
+          },
+          parse_mode: "HTML",
+        });
+      }
+      user.step = "";
+      user.tempPollTitle = "";
+      user.tempPollOptions = [];
+      user.tempPollMessageId = null;
+      user.currentPollId = null;
+      user.tempPollOption = "";
+      await user.save();
+    }
+  } catch (error) {
+    console.error("Error in start command:", error);
+    await ctx.reply("An error occurred. Please try again later.");
+  }
+});
+
+bot.on("contact", async (ctx) => {
+  try {
+    const phoneNumber = ctx.message.contact.phone_number;
+    const telegramId = ctx.message.contact.user_id;
+
+    let user = await User.findOne({ telegramId });
+
+    if (!user) {
+      user = new User({ telegramId, phoneNumber, votes: [] });
+    } else {
+      user.phoneNumber = phoneNumber;
+    }
+
+    await user.save();
+
+    if (ctx.from.id !== parseInt(process.env.ADMIN_CHAT_ID, 10)) {
+      await ctx.reply(
+        "<b>Ассалому Алайкум.</b>\nСўровнома ботга ҳуш келибсиз!",
+        {
+          reply_markup: {
+            keyboard: [["Vote"]],
+            resize_keyboard: true,
+          },
+          parse_mode: "HTML",
+        },
+      );
+    } else {
+      await ctx.reply("<b>Ассалому Алайкум.</b>\nAdmin ботга ҳуш келибсиз!", {
         reply_markup: {
           keyboard: adminKeyboards,
           resize_keyboard: true,
@@ -81,53 +143,15 @@ bot.command("start", async (ctx) => {
         parse_mode: "HTML",
       });
     }
-    user.step = "";
-    user.tempPollTitle = "";
-    user.tempPollOptions = [];
-    user.tempPollMessageId = null;
-    user.currentPollId = null;
-    user.tempPollOption = "";
-    await user.save();
+  } catch (error) {
+    console.error("Error handling contact:", error);
+    await ctx.reply("An error occurred. Please try again later.");
   }
 });
 
-bot.on("contact", async (ctx) => {
-  const phoneNumber = ctx.message.contact.phone_number;
-  const telegramId = ctx.message.contact.user_id;
-
-  let user = await User.findOne({ telegramId });
-
-  if (!user) {
-    user = new User({ telegramId, phoneNumber, votes: [] });
-  } else {
-    user.phoneNumber = phoneNumber;
-  }
-
-  await user.save();
-
-  if (ctx.from.id !== parseInt(process.env.ADMIN_CHAT_ID, 10)) {
-    await ctx.reply("<b>Ассалому Алайкум.</b>\nСўровнома ботга ҳуш келибсиз!", {
-      reply_markup: {
-        keyboard: [
-          [
-            {
-              text: "Vote",
-            },
-          ],
-        ],
-        resize_keyboard: true,
-      },
-      parse_mode: "HTML",
-    });
-  } else {
-    await ctx.reply("<b>Ассалому Алайкум.</b>\nAdmin ботга ҳуш келибсиз!", {
-      reply_markup: {
-        keyboard: adminKeyboards,
-        resize_keyboard: true,
-      },
-      parse_mode: "HTML",
-    });
-  }
+bot.catch((err, ctx) => {
+  console.error(`Bot encountered an error for ${ctx.updateType}`, err);
+  ctx.reply("An unexpected error occurred. Please try again later.");
 });
 
 const voteToPoll = async (ctx) => {
@@ -1105,7 +1129,11 @@ bot.action(/subscribe/, subscribe);
 // Connect to MongoDB
 mongoose.connect(process.env.MONGODB_URI).then(() => {
   console.log("Connected to MongoDB");
-  bot.launch(() => console.log("Bot started"));
+  bot
+    .launch(() => console.log("Bot started"))
+    .catch((error) => {
+      console.error("Error launching the bot:", error);
+    });
 });
 
 process.once("SIGINT", () => bot.stop("SIGINT"));
