@@ -3,10 +3,21 @@ const { Telegraf, Markup, session } = require("telegraf");
 const mongoose = require("mongoose");
 const Poll = require("./models/poll");
 const User = require("./models/user");
+const logger = require("./logger"); // Import the logger
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
 bot.use(session());
+
+// Middleware Logger
+bot.use(async (ctx, next) => {
+  const start = Date.now();
+  await next();
+  const ms = Date.now() - start;
+  logger.info(
+    `${ctx.from.first_name}- Update type: ${ctx.updateType}, response time: ${ms}ms`,
+  );
+});
 
 const adminKeyboards = [["Сўровнома яратиш", "Барча сўровномалар"]];
 const userKeyboards = [["Овоз бериш"]];
@@ -20,7 +31,10 @@ const checkIsAdmin = async (ctx, next) => {
     }
     await next();
   } catch (error) {
-    console.log(error);
+    logger.error("Фойдаланувчи обунасини текширишда хатолик юз берди:", {
+      error,
+    });
+    await ctx.reply("Хатолик. Кайтадан уриниб кўринг /start");
   }
 };
 
@@ -36,7 +50,9 @@ async function isUserSubscribed(ctx) {
     }
     return true;
   } catch (error) {
-    console.error("Фойдаланувчи обунасини текширишда хатолик юз берди:", error);
+    logger.error("Фойдаланувчи обунасини текширишда хатолик юз берди:", {
+      error,
+    });
     return false;
   }
 }
@@ -55,7 +71,7 @@ async function isBotAdminInChannel(ctx, next) {
     }
     await next();
   } catch (error) {
-    console.error("Ботни каналдаги ўрнини текширишда хатолик:", error);
+    logger.error("Ботни каналдаги ўрнини текширишда хатолик:", { error });
     await ctx.reply(`Ботни каналдаги ўрнини текширишда хатолик: ${error}`);
   }
 }
@@ -105,7 +121,9 @@ bot.command("start", async (ctx) => {
       await user.save();
     }
   } catch (error) {
-    console.error("Error in start command:", error);
+    logger.error("Xатолик юз берди:", {
+      error,
+    });
     await ctx.reply("Хатолик. Кайтадан уриниб кўринг /start");
   }
 });
@@ -146,7 +164,9 @@ bot.on("contact", async (ctx) => {
       });
     }
   } catch (error) {
-    console.error("Error handling contact:", error);
+    logger.error("Xатолик юз берди:", {
+      error,
+    });
     await ctx.reply(`Хатолик. Кайтадан уриниб кўринг ${error}`);
   }
 });
@@ -158,10 +178,10 @@ bot.catch((err, ctx) => {
   bot
     .launch()
     .then(() => {
-      console.log("Бот ўзини қайта ишга тушурди.");
+      logger.info("Бот ўзини қайта ишга тушурди.");
     })
-    .catch((launchError) => {
-      console.error("Ботни ишга тушуришда хаатолик:", launchError);
+    .catch((error) => {
+      logger.error("Ботни ишга тушуришда хаатолик:", { error });
       process.exit(1);
     });
 });
@@ -300,7 +320,7 @@ const addTempPollTitle = async (ctx) => {
       { tempPollTitle },
     ).lean();
   } catch (error) {
-    console.log(error);
+    logger.error("Хатолик юз берди:", { error });
     await ctx.reply("Хатолик. Кайтадан уриниб кўринг");
   }
 };
@@ -337,7 +357,7 @@ const saveTempPollTitle = async (ctx) => {
       },
     });
   } catch (error) {
-    console.log(error);
+    logger.error("Хатолик юз берди:", { error });
     await ctx.reply("Хатолик. Кайтадан уриниб кўринг");
   }
 };
@@ -363,7 +383,7 @@ const addPollData = async (ctx, user) => {
       { tempPollMessageId },
     ).lean();
   } catch (error) {
-    console.log(error);
+    logger.error("Хатолик юз берди:", { error });
     await ctx.reply("Хатолик. Кайтадан уриниб кўринг");
   }
 };
@@ -398,7 +418,7 @@ const savePollData = async (ctx, user) => {
       },
     });
   } catch (error) {
-    console.log(error);
+    logger.error("Хатолик юз берди:", { error });
     await ctx.reply("Хатолик. Кайтадан уриниб кўринг");
   }
 };
@@ -438,7 +458,7 @@ const createPollOption = async (ctx, next) => {
       },
     });
   } catch (error) {
-    console.log(error);
+    logger.error("Хатолик юз берди:", { error });
     await ctx.reply("Хатолик. Кайтадан уриниб кўринг");
   }
 };
@@ -466,7 +486,7 @@ const addPollOption = async (ctx, user) => {
       { tempPollOption: pollOption },
     ).lean();
   } catch (error) {
-    console.log(error);
+    logger.error("Хатолик юз берди:", { error });
     await ctx.reply("Хатолик. Кайтадан уриниб кўринг");
   }
 };
@@ -517,7 +537,7 @@ const saveTempPollOption = async (ctx) => {
       },
     });
   } catch (error) {
-    console.log(error);
+    logger.error("Хатолик юз берди:", { error });
     await ctx.reply("Хатолик. Кайтадан уриниб кўринг");
   }
 };
@@ -569,7 +589,7 @@ const deletePollOption = async (ctx, next) => {
       inline_keyboard: buttons,
     });
   } catch (error) {
-    console.log(error);
+    logger.error("Хатолик юз берди:", { error });
     await ctx.reply("Хатолик. Кайтадан уриниб кўринг");
   }
 };
@@ -750,7 +770,7 @@ const deletePoll = async (ctx, next) => {
       resize_keyboard: true,
     });
   } catch (error) {
-    console.log(error);
+    logger.error("Хатолик юз берди:", { error });
     await ctx.reply("Хатолик. Кайтадан уриниб кўринг");
   }
 };
@@ -792,7 +812,7 @@ const tooglePoll = async (ctx, next) => {
       resize_keyboard: true,
     });
   } catch (error) {
-    console.log(error);
+    logger.error("Хатолик юз берди:", { error });
     await ctx.reply("Хатолик. Кайтадан уриниб кўринг");
   }
 };
@@ -836,7 +856,7 @@ const publishPoll = async (ctx, next) => {
 
     await ctx.reply("Сўровнома каналга юборилди");
   } catch (error) {
-    console.log(error);
+    logger.error("Хатолик юз берди:", { error });
     await ctx.reply("Хатолик. Кайтадан уриниб кўринг");
   }
 };
@@ -887,7 +907,7 @@ const choosePoll = async (ctx, next) => {
       },
     );
   } catch (error) {
-    console.log(error);
+    logger.error("Хатолик юз берди:", { error });
 
     await ctx.reply("Хатолик: " + error.message);
   }
@@ -1034,7 +1054,9 @@ const votePoll = async (ctx, next) => {
       );
     }
   } catch (error) {
-    console.log(error);
+    logger.error("Xатолик юз берди:", {
+      error,
+    });
     ctx.reply("Хатолик");
   }
 };
@@ -1088,7 +1110,9 @@ const subscribe = async (ctx, next) => {
 
     await ctx.deleteMessage();
   } catch (error) {
-    console.log(error);
+    logger.error("Xатолик юз берди:", {
+      error,
+    });
     ctx.reply("Хатолик");
   }
 };
@@ -1140,7 +1164,7 @@ bot.action(/subscribe/, subscribe);
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGODB_URI).then(() => {
-  console.log("Connected to MongoDB");
+  logger.info("MongoDB connected");
 });
 
 // if production use webhook else polling
@@ -1151,7 +1175,8 @@ if (process.env.NODE_ENV === "production") {
   bot
     .launch(() => console.log("Bot started"))
     .catch((error) => {
-      console.error("Error launching the bot:", error);
+      logger.error("Ботни ишга тушуришда хаатолик:", { error });
+      process.exit(1);
     });
 }
 
@@ -1159,11 +1184,11 @@ process.once("SIGINT", () => bot.stop("SIGINT"));
 process.once("SIGTERM", () => bot.stop("SIGTERM"));
 
 module.exports = async (req, res) => {
-  try{
+  try {
     await bot.handleUpdate(req.body);
     res.sendStatus(200);
   } catch (error) {
-    console.log(error);
+    logger.error("Ботда ноодатий хатолик юз берди:", { error });
     res.sendStatus(500);
   }
 };
