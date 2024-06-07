@@ -1,10 +1,12 @@
 require("dotenv").config();
-const { Telegraf, Markup } = require("telegraf");
+const { Telegraf, Markup, session } = require("telegraf");
 const mongoose = require("mongoose");
 const Poll = require("./models/poll");
 const User = require("./models/user");
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
+
+bot.use(session());
 
 const adminKeyboards = [["Сўровнома яратиш", "Барча сўровномалар"]];
 const userKeyboards = [["Овоз бериш"]];
@@ -1141,11 +1143,27 @@ mongoose.connect(process.env.MONGODB_URI).then(() => {
   console.log("Connected to MongoDB");
 });
 
-bot
-  .launch(() => console.log("Bot started"))
-  .catch((error) => {
-    console.error("Error launching the bot:", error);
-  });
+// if production use webhook else polling
+if (process.env.NODE_ENV === "production") {
+  bot.telegram.setWebhook(process.env.WEBHOOK_URL);
+  webhookCallback("/api/webhook");
+} else {
+  bot
+    .launch(() => console.log("Bot started"))
+    .catch((error) => {
+      console.error("Error launching the bot:", error);
+    });
+}
 
 process.once("SIGINT", () => bot.stop("SIGINT"));
 process.once("SIGTERM", () => bot.stop("SIGTERM"));
+
+module.exports = async (req, res) => {
+  try{
+    await bot.handleUpdate(req.body);
+    res.sendStatus(200);
+  } catch (error) {
+    console.log(error);
+    res.sendStatus(500);
+  }
+};
