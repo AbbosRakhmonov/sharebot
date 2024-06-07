@@ -152,6 +152,16 @@ bot.on("contact", async (ctx) => {
 bot.catch((err, ctx) => {
   console.error(`Ботда ноодатий хатолик юз берди ${ctx.updateType}`, err);
   ctx.reply("Ботда ноодатий хатолик юз берди, кайтадан уриниб кўринг");
+  bot.stop("SIGINT");
+  bot
+    .launch()
+    .then(() => {
+      console.log("Бот ўзини қайта ишга тушурди.");
+    })
+    .catch((launchError) => {
+      console.error("Ботни ишга тушуришда хаатолик:", launchError);
+      process.exit(1);
+    });
 });
 
 const voteToPoll = async (ctx) => {
