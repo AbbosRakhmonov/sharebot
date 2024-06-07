@@ -24,11 +24,6 @@ const checkIsAdmin = async (ctx, next) => {
   return await next();
 };
 
-// Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI).then(() => {
-  console.log("Connected to MongoDB");
-});
-
 // Utility function to check if a user is subscribed to required channels
 async function isUserSubscribed(ctx) {
   const chatMember = await ctx.telegram.getChatMember(
@@ -1115,7 +1110,11 @@ bot.telegram.setMyCommands([
 //   }
 // });
 
-bot.launch(() => console.log("Bot started"));
+// Connect to MongoDB
+mongoose.connect(process.env.MONGODB_URI).then(() => {
+  console.log("Connected to MongoDB");
+  bot.launch(() => console.log("Bot started"));
+});
 
 process.once("SIGINT", () => bot.stop("SIGINT"));
 process.once("SIGTERM", () => bot.stop("SIGTERM"));
