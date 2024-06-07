@@ -65,11 +65,10 @@ bot.command("start", async (ctx) => {
     await ctx.reply(
       "Ботдан фойдаланиш учун пастдаги <b><i>Share Contact</i></b> тугмасини босинг 👇",
       {
-        reply_markup: Markup.keyboard([
-          Markup.button.contactRequest("Share Contact"),
-        ])
-          .oneTime()
-          .resize(),
+        reply_markup: {
+          keyboard: [[Markup.button.contactRequest("Share Contact")]],
+          resize_keyboard: true,
+        },
         parse_mode: "HTML",
       },
     );
@@ -178,11 +177,14 @@ const listPolls = async (ctx) => {
       Markup.button.callback("🗑", `delete-poll_${poll._id}`),
       Markup.button.callback("🔗", `publish-poll_${poll._id}`),
     ],
-  ])[0];
+  ]);
+
+  // Flatten the buttons array for Telegraf
+  const flattenedButtons = [].concat(...buttons);
 
   await ctx.reply(`<b>Сўровномалар:</b>`, {
     reply_markup: {
-      inline_keyboard: buttons,
+      inline_keyboard: flattenedButtons,
       resize_keyboard: true,
     },
     parse_mode: "HTML",
@@ -318,19 +320,21 @@ const saveTempPollTitle = async (ctx) => {
 };
 
 const addPollData = async (ctx, user) => {
-  let tempPollMessageId = null;
-
-  if (ctx.message) {
-    tempPollMessageId = ctx.message.message_id;
-  } else if (ctx.edited_message) {
-    tempPollMessageId = ctx.edited_message.message_id;
-  }
-
-  if (!tempPollMessageId) {
-    return await ctx.reply("Илтимос сўровнома вариантини юборинг");
-  }
-
   try {
+    const { message, edited_message } = ctx.update;
+
+    let tempPollMessageId = null;
+
+    if (message) {
+      tempPollMessageId = message.message_id;
+    } else if (edited_message) {
+      tempPollMessageId = edited_message.message_id;
+    }
+
+    if (!tempPollMessageId) {
+      return await ctx.reply("Илтимос сўровномани узини юборинг");
+    }
+
     await User.findOneAndUpdate(
       { telegramId: user.telegramId },
       { tempPollMessageId },
@@ -413,8 +417,6 @@ const createPollOption = async (ctx, next) => {
   } catch (error) {
     console.log(error);
     await ctx.reply("Хатолик. Кайтадан уриниб кўринг");
-  } finally {
-    await next();
   }
 };
 
@@ -546,8 +548,6 @@ const deletePollOption = async (ctx, next) => {
   } catch (error) {
     console.log(error);
     await ctx.reply("Хатолик. Кайтадан уриниб кўринг");
-  } finally {
-    await next();
   }
 };
 
@@ -615,8 +615,6 @@ bot.on("text", async (ctx, next) => {
   //   default:
   //     break;
   // }
-
-  await next();
 });
 
 bot.on(["message", "edited_message"], async (ctx, next) => {
@@ -626,11 +624,10 @@ bot.on(["message", "edited_message"], async (ctx, next) => {
     return await ctx.reply(
       "Ботдан фойдаланиш учун пастдаги <b><i>Share Contact</i></b> тугмасини босинг 👇",
       {
-        reply_markup: Markup.keyboard([
-          Markup.button.contactRequest("Share Contact"),
-        ])
-          .oneTime()
-          .resize(),
+        reply_markup: {
+          keyboard: [[Markup.button.contactRequest("Share Contact")]],
+          resize_keyboard: true,
+        },
         parse_mode: "HTML",
       },
     );
@@ -689,8 +686,6 @@ const seePoll = async (ctx, next) => {
   } catch (error) {
     console.log(error);
     await ctx.reply("Хатолик. Кайтадан уриниб кўринг");
-  } finally {
-    await next();
   }
 };
 
@@ -722,17 +717,18 @@ const deletePoll = async (ctx, next) => {
         Markup.button.callback("🗑", `delete-poll_${poll._id}`),
         Markup.button.callback("🔗", `publish-poll_${poll._id}`),
       ],
-    ])[0];
+    ]);
+    // Flatten the buttons array for Telegraf
+    const flattenedButtons = [].concat(...buttons);
+
     // reply without any words onyl inline button
     await ctx.editMessageReplyMarkup({
-      inline_keyboard: buttons,
+      inline_keyboard: flattenedButtons,
       resize_keyboard: true,
     });
   } catch (error) {
     console.log(error);
     await ctx.reply("Хатолик. Кайтадан уриниб кўринг");
-  } finally {
-    await next();
   }
 };
 
@@ -749,6 +745,7 @@ const tooglePoll = async (ctx, next) => {
     if (polls.length === 0) {
       return ctx.reply("Сўровнома топилмади");
     }
+
     const buttons = polls.map((poll) => [
       [
         Markup.button.callback(
@@ -761,17 +758,19 @@ const tooglePoll = async (ctx, next) => {
         Markup.button.callback("🗑", `delete-poll_${poll._id}`),
         Markup.button.callback("🔗", `publish-poll_${poll._id}`),
       ],
-    ])[0];
+    ]);
+
+    // Flatten the buttons array for Telegraf
+    const flattenedButtons = [].concat(...buttons);
+
     // reply without any words onyl inline button
     await ctx.editMessageReplyMarkup({
-      inline_keyboard: buttons,
+      inline_keyboard: flattenedButtons,
       resize_keyboard: true,
     });
   } catch (error) {
     console.log(error);
     await ctx.reply("Хатолик. Кайтадан уриниб кўринг");
-  } finally {
-    await next();
   }
 };
 
@@ -816,8 +815,6 @@ const publishPoll = async (ctx, next) => {
   } catch (error) {
     console.log(error);
     await ctx.reply("Хатолик. Кайтадан уриниб кўринг");
-  } finally {
-    await next();
   }
 };
 
@@ -835,13 +832,12 @@ const choosePoll = async (ctx, next) => {
 
     if (!user) {
       return await ctx.reply(
-        "Ботдан фойдаланиш учун пастдаги <b>Share Contact</b> тугмасини босинг 👇",
+        "Ботдан фойдаланиш учун пастдаги <b><i>Share Contact</i></b> тугмасини босинг 👇",
         {
-          reply_markup: Markup.keyboard([
-            Markup.button.contactRequest("Share Contact"),
-          ])
-            .oneTime()
-            .resize(),
+          reply_markup: {
+            keyboard: [[Markup.button.contactRequest("Share Contact")]],
+            resize_keyboard: true,
+          },
           parse_mode: "HTML",
         },
       );
@@ -871,8 +867,6 @@ const choosePoll = async (ctx, next) => {
     console.log(error);
 
     await ctx.reply("Хатолик: " + error.message);
-  } finally {
-    await next();
   }
 };
 
@@ -906,13 +900,12 @@ const votePoll = async (ctx, next) => {
 
     if (!user) {
       return await ctx.reply(
-        "Ботдан фойдаланиш учун пастдаги <b>Share Contact</b> тугмасини босинг 👇",
+        "Ботдан фойдаланиш учун пастдаги <b><i>Share Contact</i></b> тугмасини босинг 👇",
         {
-          reply_markup: Markup.keyboard([
-            Markup.button.contactRequest("Share Contact"),
-          ])
-            .oneTime()
-            .resize(),
+          reply_markup: {
+            keyboard: [[Markup.button.contactRequest("Share Contact")]],
+            resize_keyboard: true,
+          },
           parse_mode: "HTML",
         },
       );
@@ -1020,8 +1013,6 @@ const votePoll = async (ctx, next) => {
   } catch (error) {
     console.log(error);
     ctx.reply("Хатолик");
-  } finally {
-    await next();
   }
 };
 
@@ -1039,13 +1030,12 @@ const subscribe = async (ctx, next) => {
 
     if (!user) {
       return await ctx.reply(
-        "Ботдан фойдаланиш учун пастдаги <b>Share Contact</b> тугмасини босинг 👇",
+        "Ботдан фойдаланиш учун пастдаги <b><i>Share Contact</i></b> тугмасини босинг 👇",
         {
-          reply_markup: Markup.keyboard([
-            Markup.button.contactRequest("Share Contact"),
-          ])
-            .oneTime()
-            .resize(),
+          reply_markup: {
+            keyboard: [[Markup.button.contactRequest("Share Contact")]],
+            resize_keyboard: true,
+          },
           parse_mode: "HTML",
         },
       );
@@ -1077,8 +1067,6 @@ const subscribe = async (ctx, next) => {
   } catch (error) {
     console.log(error);
     ctx.reply("Хатолик");
-  } finally {
-    await next();
   }
 };
 
