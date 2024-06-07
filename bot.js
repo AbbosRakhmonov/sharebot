@@ -1129,12 +1129,13 @@ bot.action(/subscribe/, subscribe);
 // Connect to MongoDB
 mongoose.connect(process.env.MONGODB_URI).then(() => {
   console.log("Connected to MongoDB");
-  bot
-    .launch(() => console.log("Bot started"))
-    .catch((error) => {
-      console.error("Error launching the bot:", error);
-    });
 });
+
+bot
+  .launch(() => console.log("Bot started"))
+  .catch((error) => {
+    console.error("Error launching the bot:", error);
+  });
 
 process.once("SIGINT", () => bot.stop("SIGINT"));
 process.once("SIGTERM", () => bot.stop("SIGTERM"));
