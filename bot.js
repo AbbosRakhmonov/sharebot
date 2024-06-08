@@ -1146,13 +1146,13 @@ mongoose.connect(process.env.MONGODB_URI).then(() => {
 if (process.env.NODE_ENV === "production") {
   bot.telegram.setWebhook(process.env.WEBHOOK_URL);
   bot.webhookCallback("/api/webhook");
-} else {
-  bot
-    .launch(() => console.log("Bot started"))
-    .catch((error) => {
-      console.error("Error launching the bot:", error);
-    });
 }
+
+bot
+  .launch(() => console.log("Bot started"))
+  .catch((error) => {
+    console.error("Error launching the bot:", error);
+  });
 
 process.once("SIGINT", () => bot.stop("SIGINT"));
 process.once("SIGTERM", () => bot.stop("SIGTERM"));
