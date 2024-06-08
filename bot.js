@@ -1035,7 +1035,6 @@ const votePoll = async (ctx, next) => {
     }
   } catch (error) {
     console.error(error);
-    ctx.reply("Хатолик");
   }
 };
 

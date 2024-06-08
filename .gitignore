@@ -8,3 +8,4 @@
 .env
 .vercel
 yarn.lock
+.env.production
