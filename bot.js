@@ -57,7 +57,6 @@ if (process.env.NODE_ENV === "production") {
   process.once('SIGTERM', () => bot.stop('SIGTERM'));
 }
 
-module.exports = bot;
 
 const adminKeyboards = [["Сўровнома яратиш", "Барча сўровномалар"]];
 const userKeyboards = [["Овоз бериш"]];
