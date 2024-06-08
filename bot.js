@@ -3,10 +3,18 @@ const { Telegraf, Markup, session } = require("telegraf");
 const mongoose = require("mongoose");
 const Poll = require("./models/poll");
 const User = require("./models/user");
+const logger = require("./logger");
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
 bot.use(session());
+
+bot.use(async (ctx, next) => {
+  const start = Date.now();
+  await next();
+  const ms = Date.now() - start;
+  logger.info(`${ctx.from.first_name} - Update type: ${ctx.updateType}, response time: ${ms}ms`);
+});
 
 const adminKeyboards = [["Сўровнома яратиш", "Барча сўровномалар"]];
 const userKeyboards = [["Овоз бериш"]];
@@ -20,7 +28,7 @@ const checkIsAdmin = async (ctx, next) => {
     }
     await next();
   } catch (error) {
-    console.log(error);
+    logger.error(`Хатолик: ${ctx.updateType}`, { error });
   }
 };
 
@@ -36,7 +44,7 @@ async function isUserSubscribed(ctx) {
     }
     return true;
   } catch (error) {
-    console.error("Фойдаланувчи обунасини текширишда хатолик юз берди:", error);
+    logger.error("Фойдаланувчи обунасини текширишда хатолик юз берди:", { error });
     return false;
   }
 }
@@ -55,7 +63,7 @@ async function isBotAdminInChannel(ctx, next) {
     }
     await next();
   } catch (error) {
-    console.error("Ботни каналдаги ўрнини текширишда хатолик:", error);
+    logger.error('Ботни каналдаги ўрнини текширишда хатолик:', { error });
     await ctx.reply(`Ботни каналдаги ўрнини текширишда хатолик: ${error}`);
   }
 }
@@ -105,7 +113,7 @@ bot.command("start", async (ctx) => {
       await user.save();
     }
   } catch (error) {
-    console.error("Error in start command:", error);
+    logger.error('Хатолик:', { error });
     await ctx.reply("Хатолик. Кайтадан уриниб кўринг /start");
   }
 });
@@ -146,7 +154,7 @@ bot.on("contact", async (ctx) => {
       });
     }
   } catch (error) {
-    console.error("Error handling contact:", error);
+    logger.error('Хатолик:', { error });
     await ctx.reply(`Хатолик. Кайтадан уриниб кўринг ${error}`);
   }
 });
@@ -158,11 +166,10 @@ bot.catch((err, ctx) => {
   bot
     .launch()
     .then(() => {
-      console.log("Бот ўзини қайта ишга тушурди.");
+      logger.info("Бот ўзини қайта ишга тушурди.");
     })
-    .catch((launchError) => {
-      console.error("Ботни ишга тушуришда хаатолик:", launchError);
-      process.exit(1);
+    .catch((error) => {
+      logger.error("Ботни ишга тушуришда хаатолик:", { error });
     });
 });
 
@@ -300,7 +307,7 @@ const addTempPollTitle = async (ctx) => {
       { tempPollTitle },
     ).lean();
   } catch (error) {
-    console.log(error);
+    logger.error('Хатолик:', { error });
     await ctx.reply("Хатолик. Кайтадан уриниб кўринг");
   }
 };
@@ -337,7 +344,7 @@ const saveTempPollTitle = async (ctx) => {
       },
     });
   } catch (error) {
-    console.log(error);
+    logger.error('Хатолик:', { error });
     await ctx.reply("Хатолик. Кайтадан уриниб кўринг");
   }
 };
@@ -363,7 +370,7 @@ const addPollData = async (ctx, user) => {
       { tempPollMessageId },
     ).lean();
   } catch (error) {
-    console.log(error);
+    logger.error('Хатолик:', { error });
     await ctx.reply("Хатолик. Кайтадан уриниб кўринг");
   }
 };
@@ -398,7 +405,7 @@ const savePollData = async (ctx, user) => {
       },
     });
   } catch (error) {
-    console.log(error);
+    logger.error('Хатолик:', { error });
     await ctx.reply("Хатолик. Кайтадан уриниб кўринг");
   }
 };
@@ -438,7 +445,7 @@ const createPollOption = async (ctx, next) => {
       },
     });
   } catch (error) {
-    console.log(error);
+    logger.error('Хатолик:', { error });
     await ctx.reply("Хатолик. Кайтадан уриниб кўринг");
   }
 };
@@ -466,7 +473,7 @@ const addPollOption = async (ctx, user) => {
       { tempPollOption: pollOption },
     ).lean();
   } catch (error) {
-    console.log(error);
+    logger.error('Хатолик:', { error });
     await ctx.reply("Хатолик. Кайтадан уриниб кўринг");
   }
 };
@@ -517,7 +524,7 @@ const saveTempPollOption = async (ctx) => {
       },
     });
   } catch (error) {
-    console.log(error);
+    logger.error('Хатолик:', { error });
     await ctx.reply("Хатолик. Кайтадан уриниб кўринг");
   }
 };
@@ -569,7 +576,7 @@ const deletePollOption = async (ctx, next) => {
       inline_keyboard: buttons,
     });
   } catch (error) {
-    console.log(error);
+    logger.error('Хатолик:', { error });
     await ctx.reply("Хатолик. Кайтадан уриниб кўринг");
   }
 };
@@ -707,7 +714,7 @@ const seePoll = async (ctx, next) => {
       await ctx.reply("Вариантлар мавжуд эмас");
     }
   } catch (error) {
-    console.log(error);
+    logger.error('Хатолик:', { error });
     await ctx.reply("Хатолик. Кайтадан уриниб кўринг");
   }
 };
@@ -750,7 +757,7 @@ const deletePoll = async (ctx, next) => {
       resize_keyboard: true,
     });
   } catch (error) {
-    console.log(error);
+    logger.error('Хатолик:', { error });
     await ctx.reply("Хатолик. Кайтадан уриниб кўринг");
   }
 };
@@ -792,7 +799,7 @@ const tooglePoll = async (ctx, next) => {
       resize_keyboard: true,
     });
   } catch (error) {
-    console.log(error);
+    logger.error('Хатолик:', { error });
     await ctx.reply("Хатолик. Кайтадан уриниб кўринг");
   }
 };
@@ -836,7 +843,7 @@ const publishPoll = async (ctx, next) => {
 
     await ctx.reply("Сўровнома каналга юборилди");
   } catch (error) {
-    console.log(error);
+    logger.error('Хатолик:', { error });
     await ctx.reply("Хатолик. Кайтадан уриниб кўринг");
   }
 };
@@ -868,26 +875,31 @@ const choosePoll = async (ctx, next) => {
 
     let buttons = poll.options.map((option, index) => [
       Markup.button.callback(
-        `(${option.votes}) ${option.text} ${
-          existingVote && existingVote.optionIndex === index ? " ✅" : ""
+        `(${option.votes}) ${option.text} ${existingVote && existingVote.optionIndex === index ? " ✅" : ""
         }`,
         `vote_${pollId}_${index}`,
       ),
     ]);
 
     // copy poll message
-    await ctx.telegram.copyMessage(
-      ctx.chat.id,
-      process.env.TRACKED_CHANNEL,
-      poll.messagsIdInChannel,
-      {
-        reply_markup: {
-          inline_keyboard: buttons,
+    // handle error if poll message not found
+    try {
+      await ctx.telegram.copyMessage(
+        ctx.chat.id,
+        process.env.TRACKED_CHANNEL,
+        poll.messagsIdInChannel,
+        {
+          reply_markup: {
+            inline_keyboard: buttons,
+          },
         },
-      },
-    );
+      );
+    } catch (error) {
+      logger.error('Хатолик:', { error });
+      await ctx.reply("Эхтимол бу сўровнома тугаган, ёки каналга юборилмаган");
+    }
   } catch (error) {
-    console.log(error);
+    logger.error('Хатолик:', { error });
 
     await ctx.reply("Хатолик: " + error.message);
   }
@@ -999,10 +1011,9 @@ const votePoll = async (ctx, next) => {
 
       buttons = poll.options.map((option, index) => [
         Markup.button.callback(
-          `(${option.votes}) ${option.text} ${
-            newExistingVote && newExistingVote.optionIndex === index
-              ? " ✅"
-              : ""
+          `(${option.votes}) ${option.text} ${newExistingVote && newExistingVote.optionIndex === index
+            ? " ✅"
+            : ""
           }`,
           `vote_${pollId}_${index}`,
         ),
@@ -1019,8 +1030,7 @@ const votePoll = async (ctx, next) => {
       let channelButtons = poll.options.map((option, index) => [
         Markup.button.url(
           `(${option.votes}) ${option.text}`,
-          `https://t.me/${
-            process.env.TRACKED_CHANNEL.split("@")[1]
+          `https://t.me/${process.env.TRACKED_CHANNEL.split("@")[1]
           }/?start=${pollId}_${index}`,
         ),
       ]);
@@ -1034,7 +1044,7 @@ const votePoll = async (ctx, next) => {
       );
     }
   } catch (error) {
-    console.error(error);
+    logger.error('Хатолик:', { error });
   }
 };
 
@@ -1087,7 +1097,7 @@ const subscribe = async (ctx, next) => {
 
     await ctx.deleteMessage();
   } catch (error) {
-    console.log(error);
+    logger.error('Хатолик:', { error });
     ctx.reply("Хатолик");
   }
 };
@@ -1101,73 +1111,43 @@ bot.action(/subscribe/, subscribe);
 //   { command: "start", description: "Start | Restart" },
 // ]);
 
-// // Handling deep links
-// bot.start(async (ctx) => {
-//   const deepLink = ctx.startPayload; // This contains the part after t.me/bot?start=
-//   if (deepLink.startsWith("vote")) {
-//     const [_, pollId] = deepLink.split("_");
-//     const poll = await Poll.findById(pollId).lean();
-
-//     if(!poll.active){
-//       return await ctx.reply("Poll not active.")
-//     }
-
-//     if (poll) {
-//       const buttons = poll.options.map((option, index) => [
-//         Markup.button.callback(option.text, `vote_${pollId}_${index}`),
-//       ]);
-
-//       buttons.push([
-//         Markup.button.url(
-//           "Share this poll",
-//           `https://t.me/${ctx.botInfo.username}?start=vote_${pollId}`,
-//         ),
-//       ]);
-
-//       await ctx.copyMessage(ctx.chat.id, poll.messagsId, {
-//         reply_markup: {
-//           inline_keyboard: buttons,
-//         },
-//       });
-//     } else {
-//       ctx.reply("Welcome! Use /vote to participate in polls.");
-//     }
-//   } else {
-//     ctx.reply("Welcome! Use /vote to participate in polls.");
-//   }
-// });
-
-// if production use webhook else polling
-// Set webhook URL
-bot.telegram.setWebhook(process.env.WEBHOOK_URL);
-
-// Handle webhook requests
-bot.webhookCallback = "/api/webhook";
-
-// Connect to MongoDB
 mongoose.connect(process.env.MONGODB_URI).then(() => {
   console.log("Connected to MongoDB");
 });
 
-// Start polling in development
-//  bot
-//  .launch(() => {
-//    console.log("Bot is running in development mode");
-//  })
-//  .catch((error) => {
-//    console.error("Error launching the bot:", error);
-//  });
+// if production use webhook else polling
+// Set webhook URL
 
-process.once("SIGINT", () => bot.stop("SIGINT"));
-process.once("SIGTERM", () => bot.stop("SIGTERM"));
+if (process.env.NODE_ENV === "production") {
+  module.exports = async (req, res) => {
+    try {
+      let webhook_url = process.env.WEBHOOK_URL;
+      const getWebhookInfo = await bot.telegram.getWebhookInfo();
+      if (getWebhookInfo.url !== webhook_url + '/api') {
+        await bot.telegram.deleteWebhook();
+        await bot.telegram.setWebhook(`${webhook_url}/api`);
+      }
 
-// Webhook handler
-module.exports = async (req, res) => {
-  try {
-    await bot.handleUpdate(req.body, res);
-    res.status(200).end();
-  } catch (error) {
-    console.error("Error handling update:", error);
-    res.status(500).end("Error handling update");
-  }
-};
+      if (req.method === 'POST') {
+        await bot.handleUpdate(req.body, res);
+      } else {
+        res.status(200).json('Listening to bot events...'); ``
+      }
+    } catch (error) {
+      console.error("Error handling update:", error);
+      res.status(500).json('Error');
+    }
+  };
+} else {
+  (async () => {
+    try {
+      await bot.telegram.deleteWebhook();
+      await bot.launch();
+
+      process.once('SIGINT', () => bot.stop('SIGINT'));
+      process.once('SIGTERM', () => bot.stop('SIGTERM'));
+    } catch (error) {
+      console.error("Error launching the bot:", error);
+    }
+  })();
+}

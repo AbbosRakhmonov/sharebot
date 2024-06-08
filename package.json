@@ -4,8 +4,8 @@
   "description": "A Telegram bot for creating and managing polls",
   "main": "bot.js",
   "scripts": {
-    "start": "node bot.js",
-    "dev": "nodemon bot.js"
+    "start": "cross-env NODE_ENV=production node bot.js",
+    "dev": "cross-env NODE_ENV=development nodemon bot.js"
   },
   "dependencies": {
     "dotenv": "^16.4.5",
