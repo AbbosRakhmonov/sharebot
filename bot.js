@@ -16,6 +16,49 @@ bot.use(async (ctx, next) => {
   logger.info(`${ctx.from.first_name} - Update type: ${ctx.updateType}, response time: ${ms}ms`);
 });
 
+mongoose.connect(process.env.MONGODB_URI).then(() => {
+  console.log("Connected to MongoDB");
+});
+
+// if production use webhook else polling
+// Set webhook URL
+
+if (process.env.NODE_ENV === "production") {
+  const webhookHandler = async (req, res) => {
+    try {
+      if (req.method === 'POST') {
+        await bot.handleUpdate(req.body, res);
+      } else {
+        res.status(200).json('Listening to bot events...');
+      }
+    } catch (error) {
+      console.error("Error handling update:", error);
+      res.status(500).json('Error');
+    }
+  };
+
+  bot.telegram.getWebhookInfo().then(getWebhookInfo => {
+    if (getWebhookInfo.url !== `${process.env.WEBHOOK_URL}/api`) {
+      bot.telegram.deleteWebhook().then(() => {
+        bot.telegram.setWebhook(`${process.env.WEBHOOK_URL}/api`).then(() => {
+          console.log("Webhook set successfully");
+        }).catch(err => console.error("Failed to set webhook", err));
+      }).catch(err => console.error("Failed to delete webhook", err));
+    }
+  }).catch(err => console.error("Failed to get webhook info", err));
+
+  module.exports = webhookHandler;
+} else {
+  bot.launch().then(() => {
+    console.log("Bot launched in development mode");
+  }).catch(err => console.error("Failed to launch bot", err));
+
+  process.once('SIGINT', () => bot.stop('SIGINT'));
+  process.once('SIGTERM', () => bot.stop('SIGTERM'));
+}
+
+module.exports = bot;
+
 const adminKeyboards = [["Сўровнома яратиш", "Барча сўровномалар"]];
 const userKeyboards = [["Овоз бериш"]];
 
@@ -1111,43 +1154,4 @@ bot.action(/subscribe/, subscribe);
 //   { command: "start", description: "Start | Restart" },
 // ]);
 
-mongoose.connect(process.env.MONGODB_URI).then(() => {
-  console.log("Connected to MongoDB");
-});
-
-// if production use webhook else polling
-// Set webhook URL
-
-if (process.env.NODE_ENV === "production") {
-  module.exports = async (req, res) => {
-    try {
-      let webhook_url = process.env.WEBHOOK_URL;
-      const getWebhookInfo = await bot.telegram.getWebhookInfo();
-      if (getWebhookInfo.url !== webhook_url + '/api') {
-        await bot.telegram.deleteWebhook();
-        await bot.telegram.setWebhook(`${webhook_url}/api`);
-      }
-
-      if (req.method === 'POST') {
-        await bot.handleUpdate(req.body, res);
-      } else {
-        res.status(200).json('Listening to bot events...'); ``
-      }
-    } catch (error) {
-      console.error("Error handling update:", error);
-      res.status(500).json('Error');
-    }
-  };
-} else {
-  (async () => {
-    try {
-      await bot.telegram.deleteWebhook();
-      await bot.launch();
-
-      process.once('SIGINT', () => bot.stop('SIGINT'));
-      process.once('SIGTERM', () => bot.stop('SIGTERM'));
-    } catch (error) {
-      console.error("Error launching the bot:", error);
-    }
-  })();
-}
+module.exports = bot;
