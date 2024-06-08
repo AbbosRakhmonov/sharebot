@@ -1142,27 +1142,33 @@ mongoose.connect(process.env.MONGODB_URI).then(() => {
   console.log("Connected to MongoDB");
 });
 
+process.once("SIGINT", () => bot.stop("SIGINT"));
+process.once("SIGTERM", () => bot.stop("SIGTERM"));
+
 // if production use webhook else polling
 if (process.env.NODE_ENV === "production") {
+  // Set webhook URL
   bot.telegram.setWebhook(process.env.WEBHOOK_URL);
-  bot.webhookCallback("/api/webhook");
+
+  // Handle webhook requests
+  bot.webhookCallback = "/api/webhook";
+
+  // Webhook handler
+  module.exports = async (req, res) => {
+    try {
+      await bot.handleUpdate(req.body, res);
+      res.status(200).end();
+    } catch (error) {
+      console.error("Error handling update:", error);
+      res.status(500).end("Error handling update");
+    }
+  };
 } else {
+  // Start polling in development
   bot
-    .launch(() => console.log("Bot started"))
+    .launch()
+    .then(() => console.log("Bot started"))
     .catch((error) => {
       console.error("Error launching the bot:", error);
     });
 }
-
-process.once("SIGINT", () => bot.stop("SIGINT"));
-process.once("SIGTERM", () => bot.stop("SIGTERM"));
-
-module.exports = async (req, res) => {
-  try {
-    await bot.handleUpdate(req.body);
-    res.sendStatus(200);
-  } catch (error) {
-    console.log(error);
-    res.sendStatus(500);
-  }
-};
