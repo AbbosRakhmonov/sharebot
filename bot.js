@@ -4,6 +4,8 @@ const mongoose = require("mongoose");
 const Poll = require("./models/poll");
 const User = require("./models/user");
 const logger = require("./logger");
+const cron = require('node-cron');
+
 
 mongoose.connect(process.env.MONGODB_URI).then(() => {
   logger.info("Connected to MongoDB");
@@ -25,16 +27,28 @@ bot.use(session());
 // if production use webhook else polling
 // Set webhook URL
 
-if (process.env.NODE_ENV === "production") {
-  bot.telegram.setWebhook(`${process.env.WEBHOOK_URL}/api`)
-    .then(() => console.log("Webhook set successfully"))
-    .catch(err => console.error("Failed to set webhook:", err));
+const webhookUrl = `${process.env.WEBHOOK_URL}/api`;
+let webhookSet = false;
 
-  let cron = require('node-cron');
-  // Keep bot alive
+const setWebhook = async () => {
+  try {
+    await bot.telegram.deleteWebhook();
+    await bot.telegram.setWebhook(webhookUrl);
+    webhookSet = true;
+    logger.info("Webhook set successfully");
+  } catch (err) {
+    logger.error("Failed to set webhook:", err);
+  }
+};
+
+if (process.env.NODE_ENV === "production") {
+  if (!webhookSet) {
+    setWebhook();
+  }
+
   cron.schedule('*/5 * * * * *', async () => {
     try {
-      await fetch(`${process.env.WEBHOOK_URL}/api`);
+      await fetch(webhookUrl)
       logger.info("Bot is alive");
     } catch (error) {
       logger.error("Failed to get bot info:", error);
@@ -46,6 +60,7 @@ if (process.env.NODE_ENV === "production") {
       if (req.method === 'POST') {
         await bot.handleUpdate(req.body, res);
       } else {
+        // check are all good
         res.status(200).json('Listening to bot events...');
       }
     } catch (error) {
@@ -190,15 +205,14 @@ bot.on("contact", async (ctx) => {
 bot.catch((err, ctx) => {
   console.error(`Ботда ноодатий хатолик юз берди ${ctx.updateType}`, err);
   ctx.reply("Ботда ноодатий хатолик юз берди, кайтадан уриниб кўринг");
-  bot.stop("SIGINT");
-  bot
-    .launch()
-    .then(() => {
-      logger.info("Бот ўзини қайта ишга тушурди.");
+  // relunch bot, if production use webhook else polling
+  if (process.env.NODE_ENV === "production") {
+    setWebhook();
+  } else {
+    bot.launch(() => {
+      logger.info("Bot qayta ishga tushdi");
     })
-    .catch((error) => {
-      logger.error("Ботни ишга тушуришда хаатолик:", { error });
-    });
+  }
 });
 
 const voteToPoll = async (ctx) => {
