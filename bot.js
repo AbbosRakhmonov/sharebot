@@ -189,18 +189,23 @@ bot.catch((err, ctx) => {
 });
 
 const voteToPoll = async (ctx) => {
-  const polls = await Poll.find({ active: true }).select("title").lean();
-  if (polls.length === 0) {
-    return await ctx.reply("Сўровномалар мавжуд эмас!");
+  try {
+    const polls = await Poll.find({ active: true }).select("title").lean();
+    if (polls.length === 0) {
+      return await ctx.reply("Сўровномалар мавжуд эмас!");
+    }
+    const buttons = polls.map((poll) => [
+      Markup.button.callback(poll.title, `poll_${poll._id}`),
+    ]);
+    ctx.reply(
+      "Сўровномани танланг",
+      Markup.inlineKeyboard(buttons).resize(),
+    );
+  } catch (error) {
+    logger.error('Хатолик:', { error });
+    ctx.reply("Хатолик. Кайтадан уриниб кўринг");
   }
-  const buttons = polls.map((poll) => [
-    Markup.button.callback(poll.title, `poll_${poll._id}`),
-  ]);
-  await ctx.deleteMessage();
-  await ctx.reply(
-    "Сўровномани танланг",
-    Markup.inlineKeyboard(buttons).resize(),
-  );
+
 };
 
 const listPolls = async (ctx) => {
