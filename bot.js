@@ -6,7 +6,9 @@ const User = require("./models/user");
 const logger = require("./logger");
 
 mongoose.connect(process.env.MONGODB_URI).then(() => {
-  console.log("Connected to MongoDB");
+  logger.info("Connected to MongoDB");
+}).catch((err) => {
+  logger.error("Failed to connect to MongoDB:", err);
 });
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
