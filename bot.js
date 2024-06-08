@@ -7,7 +7,6 @@ const logger = require("./logger");
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
 
-bot.use(session());
 
 bot.use(async (ctx, next) => {
   const start = Date.now();
@@ -15,6 +14,9 @@ bot.use(async (ctx, next) => {
   const ms = Date.now() - start;
   logger.info(`${ctx.from.first_name} - Update type: ${ctx.updateType}, response time: ${ms}ms`);
 });
+
+
+bot.use(session());
 
 mongoose.connect(process.env.MONGODB_URI).then(() => {
   console.log("Connected to MongoDB");
@@ -24,7 +26,11 @@ mongoose.connect(process.env.MONGODB_URI).then(() => {
 // Set webhook URL
 
 if (process.env.NODE_ENV === "production") {
-  const webhookHandler = async (req, res) => {
+  bot.telegram.setWebhook(`${process.env.WEBHOOK_URL}/api`)
+    .then(() => console.log("Webhook set successfully"))
+    .catch(err => console.error("Failed to set webhook:", err));
+
+  module.exports = async (req, res) => {
     try {
       if (req.method === 'POST') {
         await bot.handleUpdate(req.body, res);
@@ -36,58 +42,29 @@ if (process.env.NODE_ENV === "production") {
       res.status(500).json('Error');
     }
   };
-
-  bot.telegram.getWebhookInfo().then(getWebhookInfo => {
-    if (getWebhookInfo.url !== `${process.env.WEBHOOK_URL}/api`) {
-      bot.telegram.deleteWebhook().then(() => {
-        bot.telegram.setWebhook(`${process.env.WEBHOOK_URL}/api`).then(() => {
-          console.log("Webhook set successfully");
-        }).catch(err => console.error("Failed to set webhook:", err));
-      }).catch(err => console.error("Failed to delete webhook:", err));
-    }
-  }).catch(err => console.error("Failed to get webhook info:", err));
-
-  // Export the webhook handler for production
-  module.exports = webhookHandler;
 } else {
-  bot.launch().then(() => {
-    console.log("Bot launched in development mode");
-  }).catch(err => console.error("Failed to launch bot:", err));
+  bot.launch()
+    .then(() => console.log("Bot launched in development mode"))
+    .catch(err => console.error("Failed to launch bot:", err));
 
   process.once('SIGINT', () => bot.stop('SIGINT'));
   process.once('SIGTERM', () => bot.stop('SIGTERM'));
-
-  // Export the bot instance for development
-  module.exports = bot;
 }
-
 const adminKeyboards = [["Сўровнома яратиш", "Барча сўровномалар"]];
 const userKeyboards = [["Овоз бериш"]];
 
 const checkIsAdmin = async (ctx, next) => {
-  try {
-    if (ctx.from.id !== parseInt(process.env.ADMIN_CHAT_ID, 10)) {
-      return await ctx.reply(
-        "Сиз ушбу буйруқдан фойдаланиш ҳуқуқига эга эмассиз.",
-      );
-    }
-    await next();
-  } catch (error) {
-    logger.error(`Хатолик: ${ctx.updateType}`, { error });
+  if (ctx.from.id !== parseInt(process.env.ADMIN_CHAT_ID, 10)) {
+    return await ctx.reply("Сиз ушбу буйруқдан фойдаланиш ҳуқуқига эга эмассиз.");
   }
+  await next();
 };
 
 // Utility function to check if a user is subscribed to required channels
 async function isUserSubscribed(ctx) {
   try {
-    const chatMember = await ctx.telegram.getChatMember(
-      process.env.TRACKED_CHANNEL,
-      ctx.from.id,
-    );
-    if (chatMember.status === "left" || chatMember.status === "kicked") {
-      return false;
-    }
-    return true;
+    const chatMember = await ctx.telegram.getChatMember(process.env.TRACKED_CHANNEL, ctx.from.id);
+    return !(chatMember.status === "left" || chatMember.status === "kicked");
   } catch (error) {
     logger.error("Фойдаланувчи обунасини текширишда хатолик юз берди:", { error });
     return false;
@@ -96,14 +73,8 @@ async function isUserSubscribed(ctx) {
 
 async function isBotAdminInChannel(ctx, next) {
   try {
-    const chatMember = await ctx.telegram.getChatMember(
-      process.env.TRACKED_CHANNEL,
-      ctx.botInfo.id,
-    );
-    if (
-      !chatMember.status === "administrator" ||
-      !chatMember.status === "creator"
-    ) {
+    const chatMember = await ctx.telegram.getChatMember(process.env.TRACKED_CHANNEL, ctx.botInfo.id);
+    if (!["administrator", "creator"].includes(chatMember.status)) {
       return await ctx.reply("Ботни каналда админ эмас !");
     }
     await next();
@@ -112,7 +83,6 @@ async function isBotAdminInChannel(ctx, next) {
     await ctx.reply(`Ботни каналдаги ўрнини текширишда хатолик: ${error}`);
   }
 }
-
 // Request contact info
 bot.command("start", async (ctx) => {
   try {
