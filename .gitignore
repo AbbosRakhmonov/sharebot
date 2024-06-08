@@ -7,3 +7,4 @@
 # dotenv files
 .env
 .vercel
+yarn.lock
