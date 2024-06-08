@@ -28,6 +28,17 @@ if (process.env.NODE_ENV === "production") {
     .then(() => console.log("Webhook set successfully"))
     .catch(err => console.error("Failed to set webhook:", err));
 
+  let cron = require('node-cron');
+  // Keep bot alive
+  cron.schedule('*/5 * * * * *', async () => {
+    try {
+      await fetch(`${process.env.WEBHOOK_URL}/api`);
+      logger.info("Bot is alive");
+    } catch (error) {
+      logger.error("Failed to get bot info:", error);
+    }
+  });
+
   module.exports = async (req, res) => {
     try {
       if (req.method === 'POST') {
@@ -42,7 +53,7 @@ if (process.env.NODE_ENV === "production") {
   };
 } else {
   bot.telegram.deleteWebhook();
-  
+
   bot.launch()
     .then(() => console.log("Bot launched in development mode"))
     .catch(err => console.error("Failed to launch bot:", err));
