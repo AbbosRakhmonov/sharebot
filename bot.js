@@ -1166,8 +1166,9 @@ if (process.env.NODE_ENV === "production") {
 } else {
   // Start polling in development
   bot
-    .launch()
-    .then(() => console.log("Bot started"))
+    .launch(() => {
+      console.log("Bot is running in development mode");
+    })
     .catch((error) => {
       console.error("Error launching the bot:", error);
     });
