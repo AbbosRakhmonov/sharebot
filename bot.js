@@ -42,21 +42,24 @@ if (process.env.NODE_ENV === "production") {
       bot.telegram.deleteWebhook().then(() => {
         bot.telegram.setWebhook(`${process.env.WEBHOOK_URL}/api`).then(() => {
           console.log("Webhook set successfully");
-        }).catch(err => console.error("Failed to set webhook", err));
-      }).catch(err => console.error("Failed to delete webhook", err));
+        }).catch(err => console.error("Failed to set webhook:", err));
+      }).catch(err => console.error("Failed to delete webhook:", err));
     }
-  }).catch(err => console.error("Failed to get webhook info", err));
+  }).catch(err => console.error("Failed to get webhook info:", err));
 
+  // Export the webhook handler for production
   module.exports = webhookHandler;
 } else {
   bot.launch().then(() => {
     console.log("Bot launched in development mode");
-  }).catch(err => console.error("Failed to launch bot", err));
+  }).catch(err => console.error("Failed to launch bot:", err));
 
   process.once('SIGINT', () => bot.stop('SIGINT'));
   process.once('SIGTERM', () => bot.stop('SIGTERM'));
-}
 
+  // Export the bot instance for development
+  module.exports = bot;
+}
 
 const adminKeyboards = [["Сўровнома яратиш", "Барча сўровномалар"]];
 const userKeyboards = [["Овоз бериш"]];
@@ -1152,5 +1155,3 @@ bot.action(/subscribe/, subscribe);
 // bot.telegram.setMyCommands([
 //   { command: "start", description: "Start | Restart" },
 // ]);
-
-module.exports = bot;
