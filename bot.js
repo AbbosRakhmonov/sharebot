@@ -5,8 +5,11 @@ const Poll = require("./models/poll");
 const User = require("./models/user");
 const logger = require("./logger");
 
-const bot = new Telegraf(process.env.BOT_TOKEN);
+mongoose.connect(process.env.MONGODB_URI).then(() => {
+  console.log("Connected to MongoDB");
+});
 
+const bot = new Telegraf(process.env.BOT_TOKEN);
 
 bot.use(async (ctx, next) => {
   const start = Date.now();
@@ -15,12 +18,7 @@ bot.use(async (ctx, next) => {
   logger.info(`${ctx.from.first_name} - Update type: ${ctx.updateType}, response time: ${ms}ms`);
 });
 
-
 bot.use(session());
-
-mongoose.connect(process.env.MONGODB_URI).then(() => {
-  console.log("Connected to MongoDB");
-});
 
 // if production use webhook else polling
 // Set webhook URL
@@ -43,6 +41,8 @@ if (process.env.NODE_ENV === "production") {
     }
   };
 } else {
+  bot.telegram.deleteWebhook();
+  
   bot.launch()
     .then(() => console.log("Bot launched in development mode"))
     .catch(err => console.error("Failed to launch bot:", err));
