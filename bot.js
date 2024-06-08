@@ -4,8 +4,6 @@ const mongoose = require("mongoose");
 const Poll = require("./models/poll");
 const User = require("./models/user");
 const logger = require("./logger");
-const cron = require('node-cron');
-
 
 mongoose.connect(process.env.MONGODB_URI).then(() => {
   logger.info("Connected to MongoDB");
@@ -27,33 +25,25 @@ bot.use(session());
 // if production use webhook else polling
 // Set webhook URL
 
-const webhookUrl = `${process.env.WEBHOOK_URL}/api`;
-let webhookSet = false;
-
-const setWebhook = async () => {
-  try {
-    await bot.telegram.deleteWebhook();
-    await bot.telegram.setWebhook(webhookUrl);
-    webhookSet = true;
-    logger.info("Webhook set successfully");
-  } catch (err) {
-    logger.error("Failed to set webhook:", err);
-  }
-};
 
 if (process.env.NODE_ENV === "production") {
+const webhookUrl = `${process.env.WEBHOOK_URL}/api`;
+
+let webhookSet = false;
+
+  const setWebhook = async () => {
+    try {
+      await bot.telegram.setWebhook(webhookUrl);
+      webhookSet = true;
+      logger.info("Webhook set successfully");
+    } catch (err) {
+      logger.error("Failed to set webhook:", err);
+    }
+  };
+  
   if (!webhookSet) {
     setWebhook();
   }
-
-  cron.schedule('*/5 * * * * *', async () => {
-    try {
-      await fetch(webhookUrl)
-      logger.info("Bot is alive");
-    } catch (error) {
-      logger.error("Failed to get bot info:", error);
-    }
-  });
 
   module.exports = async (req, res) => {
     try {
