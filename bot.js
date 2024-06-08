@@ -1137,39 +1137,37 @@ bot.action(/subscribe/, subscribe);
 //   }
 // });
 
+// if production use webhook else polling
+// Set webhook URL
+bot.telegram.setWebhook(process.env.WEBHOOK_URL);
+
+// Handle webhook requests
+bot.webhookCallback = "/api/webhook";
+
 // Connect to MongoDB
 mongoose.connect(process.env.MONGODB_URI).then(() => {
   console.log("Connected to MongoDB");
 });
 
+// Start polling in development
+//  bot
+//  .launch(() => {
+//    console.log("Bot is running in development mode");
+//  })
+//  .catch((error) => {
+//    console.error("Error launching the bot:", error);
+//  });
+
 process.once("SIGINT", () => bot.stop("SIGINT"));
 process.once("SIGTERM", () => bot.stop("SIGTERM"));
 
-// if production use webhook else polling
-if (process.env.NODE_ENV === "production") {
-  // Set webhook URL
-  bot.telegram.setWebhook(process.env.WEBHOOK_URL);
-
-  // Handle webhook requests
-  bot.webhookCallback = "/api/webhook";
-
-  // Webhook handler
-  module.exports = async (req, res) => {
-    try {
-      await bot.handleUpdate(req.body, res);
-      res.status(200).end();
-    } catch (error) {
-      console.error("Error handling update:", error);
-      res.status(500).end("Error handling update");
-    }
-  };
-} else {
-  // Start polling in development
-  bot
-    .launch(() => {
-      console.log("Bot is running in development mode");
-    })
-    .catch((error) => {
-      console.error("Error launching the bot:", error);
-    });
-}
+// Webhook handler
+module.exports = async (req, res) => {
+  try {
+    await bot.handleUpdate(req.body, res);
+    res.status(200).end();
+  } catch (error) {
+    console.error("Error handling update:", error);
+    res.status(500).end("Error handling update");
+  }
+};
