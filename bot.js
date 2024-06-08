@@ -24,12 +24,10 @@ bot.use(session());
 
 // if production use webhook else polling
 // Set webhook URL
-
-
 if (process.env.NODE_ENV === "production") {
-const webhookUrl = `${process.env.WEBHOOK_URL}/api`;
+  const webhookUrl = `${process.env.WEBHOOK_URL}/api`;
 
-let webhookSet = false;
+  let webhookSet = false;
 
   const setWebhook = async () => {
     try {
@@ -40,7 +38,7 @@ let webhookSet = false;
       logger.error("Failed to set webhook:", err);
     }
   };
-  
+
   if (!webhookSet) {
     setWebhook();
   }
@@ -195,14 +193,7 @@ bot.on("contact", async (ctx) => {
 bot.catch((err, ctx) => {
   console.error(`Ботда ноодатий хатолик юз берди ${ctx.updateType}`, err);
   ctx.reply("Ботда ноодатий хатолик юз берди, кайтадан уриниб кўринг");
-  // relunch bot, if production use webhook else polling
-  if (process.env.NODE_ENV === "production") {
-    setWebhook();
-  } else {
-    bot.launch(() => {
-      logger.info("Bot qayta ishga tushdi");
-    })
-  }
+  process.exit();
 });
 
 const voteToPoll = async (ctx) => {
