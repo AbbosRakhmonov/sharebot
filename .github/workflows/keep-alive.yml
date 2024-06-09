@@ -1,0 +1,15 @@
+name: Keep Vercel Deployment Alive
+
+on:
+  schedule:
+    - cron: '*/2 * * * *'  # Runs every 2 minutes
+  workflow_dispatch:
+
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Send keep-alive ping
+        run: |
+          curl -s https://share-bot.vercel.app/api > /dev/null
