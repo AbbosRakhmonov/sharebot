@@ -1,0 +1,18 @@
+{
+  "editor.tabSize": 2,
+  "editor.insertSpaces": true,
+  "editor.detectIndentation": false,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+  "eslint.validate": ["javascript", "javascriptreact"],
+  "files.exclude": {
+    "**/.git": true,
+    "**/.DS_Store": true,
+    "**/node_modules": true
+  },
+  "javascript.format.enable": false,
+  "javascript.updateImportsOnFileMove.enabled": "always",
+  "typescript.format.enable": false,
+  "typescript.updateImportsOnFileMove.enabled": "always"
+}
