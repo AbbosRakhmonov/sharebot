@@ -1,11 +1,24 @@
-const bot = require("../src");
-module.exports = async (req, res) => {
+const express = require('express');
+const bodyParser = require('body-parser');
+require('dotenv').config();
+
+const bot = require('../src');
+const app = express();
+const port = process.env.PORT || 3000;
+
+// Middleware to parse JSON bodies
+app.use(bodyParser.json());
+
+app.post(`/api`, async (req, res) => {
   try {
     await bot(req, res);
+    res.status(200).send('OK');
   } catch (e) {
-    res.statusCode = 500;
-    res.setHeader("Content-Type", "text/html");
-    res.end("<h1>Server Error</h1><p>Sorry, there was a problem</p>");
+    res.status(500).send('Server Error');
     console.error(e.message);
   }
-};
+});
+
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
+});
