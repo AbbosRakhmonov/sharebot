@@ -4,6 +4,6 @@ module.exports = async (ctx, next) => {
   await next();
   const ms = Date.now() - start;
   logger.info(
-    `${ctx.from.first_name} - Update type: ${ctx.updateType}, response time: ${ms}ms`,
+    `${ctx?.from?.first_name} - Update type: ${ctx.updateType}, response time: ${ms}ms`,
   );
 };
