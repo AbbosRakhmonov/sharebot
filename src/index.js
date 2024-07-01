@@ -2,8 +2,8 @@ const mongoose = require("mongoose");
 require("dotenv").config();
 const bot = require("./bot");
 const logger = require("./utils/logger");
-const express = require('express');
-const bodyParser = require('body-parser');
+const express = require("express");
+const bodyParser = require("body-parser");
 const webhookUrl = `${process.env.WEBHOOK_URL}/api`;
 const app = express();
 const port = 3000;
@@ -34,6 +34,7 @@ const start = async () => {
         await setWebhook();
       }
     } else {
+      await bot.telegram.deleteWebhook();
       bot.launch(() => console.log("Bot launched in development mode"));
 
       process.once("SIGINT", () => bot.stop("SIGINT"));
@@ -45,12 +46,11 @@ const start = async () => {
   }
 };
 
-
 app.post(`/`, async (req, res) => {
   try {
     res.status(200).json("Listening to bot events...");
   } catch (e) {
-    res.status(500).send('Server Error');
+    res.status(500).send("Server Error");
     console.error(e.message);
   }
 });
@@ -58,13 +58,12 @@ app.post(`/`, async (req, res) => {
 app.post(`/api`, async (req, res) => {
   try {
     await bot.handleUpdate(req.body, res);
-    res.status(200).send('OK');
+    res.status(200).send("OK");
   } catch (e) {
-    res.status(500).send('Server Error');
+    res.status(500).send("Server Error");
     console.error(e.message);
   }
 });
-
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
