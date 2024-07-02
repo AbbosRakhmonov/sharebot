@@ -29,6 +29,10 @@ const start = async () => {
       console.log("Connected to MongoDB");
     });
 
+    const botInfo = await bot.telegram.getMe()
+
+  console.log(botInfo);
+
     if (process.env.NODE_ENV === "production") {
       if (!webhookSet) {
         await setWebhook();
