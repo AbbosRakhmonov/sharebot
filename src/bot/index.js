@@ -29,13 +29,12 @@ const getAllChannels = require("./commands/admin/getAllChannels");
 const addChannel = require("./commands/admin/addChannel");
 const saveChannel = require("./commands/admin/saveChannel");
 const deleteChannel = require("./commands/admin/deleteChannel");
-const {Agent} = require("node:https");
 
 require("dotenv").config();
 
 // Create a new bot instance
 const bot = new Telegraf(process.env.BOT_TOKEN);
-console.log(process.env.BOT_TOKEN,process.env.NODE_ENV);
+console.log(process.env.BOT_TOKEN, process.env.NODE_ENV);
 
 // Middlewares
 bot.use(session());
@@ -44,7 +43,10 @@ bot.use(auth);
 // check bot blocked or not by user
 bot.use(async (ctx, next) => {
   try {
-    const blocked = await ctx.telegram.getChatMember(ctx.chat.id, ctx.botInfo.id);
+    const blocked = await ctx.telegram.getChatMember(
+      ctx.chat.id,
+      ctx.botInfo.id,
+    );
     if (blocked.status === "kicked") {
       // Bot is blocked by the user
       console.log("Bot is blocked by the user");
@@ -62,7 +64,7 @@ bot.use(async (ctx, next) => {
 });
 
 // Error handling
-bot.catch(async(err, ctx) => {
+bot.catch(async (err, ctx) => {
   console.error(`Ботда ноодатий хатолик юз берди ${ctx.updateType}`, err);
   await ctx.reply("Ботда ноодатий хатолик юз берди, кайтадан уриниб кўринг");
   process.exit(1);

@@ -2,9 +2,9 @@ const mongoose = require("mongoose");
 require("dotenv").config();
 const bot = require("./bot");
 const logger = require("./utils/logger");
-const express = require('express');
-const bodyParser = require('body-parser');
-const webhookUrl = `${process.env.WEBHOOK_URL}/api`;
+const express = require("express");
+const bodyParser = require("body-parser");
+const webhookUrl = `${process.env.WEBHOOK_URL}`;
 const app = express();
 const port = 3000;
 // Middleware to parse JSON bodies
@@ -29,7 +29,7 @@ const start = async () => {
       console.log("Connected to MongoDB");
     });
 
-    const botInfo = await bot.telegram.getMe()
+    const botInfo = await bot.telegram.getMe();
 
     console.log(botInfo);
 
@@ -49,12 +49,11 @@ const start = async () => {
   }
 };
 
-
 app.get(`/`, async (req, res) => {
   try {
-    res.status(200).send('OK')
+    res.status(200).send("OK");
   } catch (e) {
-    res.status(500).send('Server Error');
+    res.status(500).send("Server Error");
     console.error(e.message);
   }
 });
@@ -62,26 +61,25 @@ app.get(`/`, async (req, res) => {
 app.post(`/api`, async (req, res) => {
   try {
     await bot.handleUpdate(req.body, res);
-    res.status(200).send('OK');
+    res.status(200).send("OK");
   } catch (e) {
-    res.status(500).send('Server Error');
+    res.status(500).send("Server Error");
     console.error(e.message);
   }
 });
 
 start();
 
-app.listen(port,'0.0.0.0', () => {
+app.listen(port, "0.0.0.0", () => {
   console.log(`Server is running on port ${port}`);
 });
 
-
-process.on('uncaughtException', (err) => {
-  console.error('Uncaught Exception:', err);
+process.on("uncaughtException", (err) => {
+  console.error("Uncaught Exception:", err);
 });
 
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("Unhandled Rejection at:", promise, "reason:", reason);
 });
 
 // module.exports = async (req, res) => {
