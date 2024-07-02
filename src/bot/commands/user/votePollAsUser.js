@@ -87,9 +87,7 @@ const votePoll = async (ctx) => {
       poll.options[optionIndex].votes += 1;
     }
 
-    await user.save();
-
-    await poll.save();
+    await Promise.all([user.save(), poll.save()]);
 
     let buttons = [];
 

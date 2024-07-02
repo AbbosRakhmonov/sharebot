@@ -34,11 +34,7 @@ const {Agent} = require("node:https");
 require("dotenv").config();
 
 // Create a new bot instance
-const bot = new Telegraf(process.env.BOT_TOKEN,{
-  telegram: { 
-    agent: new Agent({ keepAlive: false }),
-  },
-});
+const bot = new Telegraf(process.env.BOT_TOKEN);
 console.log(process.env.BOT_TOKEN,process.env.NODE_ENV);
 
 // Middlewares
@@ -66,9 +62,9 @@ bot.use(async (ctx, next) => {
 });
 
 // Error handling
-bot.catch((err, ctx) => {
+bot.catch(async(err, ctx) => {
   console.error(`Ботда ноодатий хатолик юз берди ${ctx.updateType}`, err);
-  ctx.reply("Ботда ноодатий хатолик юз берди, кайтадан уриниб кўринг");
+  await ctx.reply("Ботда ноодатий хатолик юз берди, кайтадан уриниб кўринг");
   process.exit(1);
 });
 
