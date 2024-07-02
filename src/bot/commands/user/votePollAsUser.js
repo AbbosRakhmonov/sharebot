@@ -87,7 +87,9 @@ const votePoll = async (ctx) => {
       poll.options[optionIndex].votes += 1;
     }
 
-    await Promise.all([user.save(), poll.save()]);
+    await user.save();
+
+    await poll.save();
 
     let buttons = [];
 
@@ -115,7 +117,7 @@ const votePoll = async (ctx) => {
         Markup.button.url(
           `(${option.votes}) ${option.text}`,
           `https://t.me/${
-            process.env.TRACKED_CHANNEL.split("@")[1]
+            ctx.botInfo.username
           }/?start=${pollId}_${index}`,
         ),
       ]);

@@ -224,3 +224,6 @@
 2024-07-02T13:02:01.296Z [info] Merskvich - Update type: message, response time: 381ms 
 2024-07-02T13:02:02.926Z [info] Merskvich - Update type: callback_query, response time: 597ms 
 2024-07-02T13:02:05.196Z [info] Merskvich - Update type: callback_query, response time: 1116ms 
+2024-07-02T13:31:47.651Z [info] Abbos - Update type: callback_query, response time: 798ms 
+2024-07-02T13:31:53.219Z [info] Abbos - Update type: message, response time: 386ms 
+2024-07-02T13:32:00.161Z [info] Abbos - Update type: message, response time: 396ms 

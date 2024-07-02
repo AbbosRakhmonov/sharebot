@@ -84,7 +84,7 @@ const votePoll = async (ctx) => {
         Markup.button.url(
           `(${option.votes}) ${option.text}`,
           `https://t.me/${
-            process.env.TRACKED_CHANNEL.split("@")[1]
+            ctx.botInfo.username
           }/?start=${pollId}_${index}`,
         ),
       ]);
