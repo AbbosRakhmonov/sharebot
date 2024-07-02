@@ -30,13 +30,35 @@ const addChannel = require("./commands/admin/addChannel");
 const saveChannel = require("./commands/admin/saveChannel");
 const deleteChannel = require("./commands/admin/deleteChannel");
 
+require("dotenv").config();
+
 // Create a new bot instance
 const bot = new Telegraf(process.env.BOT_TOKEN);
+console.log(process.env.BOT_TOKEN);
 
 // Middlewares
 bot.use(session());
 bot.use(tracker);
 bot.use(auth);
+// check bot blocked or not by user
+bot.use(async (ctx, next) => {
+  try {
+    const blocked = await ctx.telegram.getChatMember(ctx.chat.id, ctx.botInfo.id);
+    if (blocked.status === "kicked") {
+      // Bot is blocked by the user
+      console.log("Bot is blocked by the user");
+      // Handle the situation accordingly
+    } else {
+      // Bot is not blocked by the user
+      console.log("Bot is not blocked by the user");
+      // Continue processing the update
+      await next();
+    }
+  } catch (error) {
+    console.error("Error checking if bot is blocked:", error);
+    // Handle the error appropriately
+  }
+});
 
 // Error handling
 bot.catch((err, ctx) => {

@@ -31,7 +31,7 @@ const start = async () => {
 
     const botInfo = await bot.telegram.getMe()
 
-  console.log(botInfo);
+    console.log(botInfo);
 
     if (process.env.NODE_ENV === "production") {
       if (!webhookSet) {
