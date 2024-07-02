@@ -1,26 +1,12 @@
 const mongoose = require("mongoose");
 require("dotenv").config();
 const bot = require("./bot");
-const logger = require("./utils/logger");
 const express = require("express");
 const bodyParser = require("body-parser");
-const webhookUrl = `${process.env.WEBHOOK_URL}/api`;
 const app = express();
 const port = 3000;
 // Middleware to parse JSON bodies
 app.use(bodyParser.json());
-
-let webhookSet = false;
-
-const setWebhook = async () => {
-  try {
-    await bot.telegram.setWebhook(webhookUrl);
-    webhookSet = true;
-    logger.info("Webhook set successfully");
-  } catch (err) {
-    console.error("Failed to set webhook:", err);
-  }
-};
 
 const start = async () => {
   try {
@@ -34,9 +20,13 @@ const start = async () => {
     console.log(botInfo);
 
     if (process.env.NODE_ENV === "production") {
-      if (!webhookSet) {
-        await setWebhook();
-      }
+      app.use(
+        await bot.createWebhook({
+          domain: process.env.WEBHOOK_URL,
+          path: "/api",
+          drop_pending_updates: true,
+        }),
+      );
     } else {
       bot.launch(() => console.log("Bot launched in development mode"));
 
@@ -51,16 +41,6 @@ const start = async () => {
 
 app.get(`/`, async (req, res) => {
   try {
-    res.status(200).send("OK");
-  } catch (e) {
-    res.status(500).send("Server Error");
-    console.error(e.message);
-  }
-});
-
-app.post(`/api`, async (req, res) => {
-  try {
-    await bot.handleUpdate(req.body, res);
     res.status(200).send("OK");
   } catch (e) {
     res.status(500).send("Server Error");
