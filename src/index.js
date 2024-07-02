@@ -50,9 +50,9 @@ const start = async () => {
 };
 
 
-app.post(`/`, async (req, res) => {
+app.get(`/`, async (req, res) => {
   try {
-    res.status(200).json("Listening to bot events...");
+    res.status(200).send('OK')
   } catch (e) {
     res.status(500).send('Server Error');
     console.error(e.message);
