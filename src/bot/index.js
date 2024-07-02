@@ -29,11 +29,16 @@ const getAllChannels = require("./commands/admin/getAllChannels");
 const addChannel = require("./commands/admin/addChannel");
 const saveChannel = require("./commands/admin/saveChannel");
 const deleteChannel = require("./commands/admin/deleteChannel");
+const {Agent} = require("node:https");
 
 require("dotenv").config();
 
 // Create a new bot instance
-const bot = new Telegraf(process.env.BOT_TOKEN);
+const bot = new Telegraf(process.env.BOT_TOKEN,{
+  telegram: { 
+    agent: new Agent({ keepAlive: false }),
+  },
+});
 console.log(process.env.BOT_TOKEN,process.env.NODE_ENV);
 
 // Middlewares

@@ -69,12 +69,12 @@ app.post(`/api`, async (req, res) => {
   }
 });
 
+start();
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
 
-start();
 
 process.on('uncaughtException', (err) => {
   console.error('Uncaught Exception:', err);
