@@ -4,7 +4,7 @@ const bot = require("./bot");
 const logger = require("./utils/logger");
 const express = require("express");
 const bodyParser = require("body-parser");
-const webhookUrl = `${process.env.WEBHOOK_URL}`;
+const webhookUrl = `${process.env.WEBHOOK_URL}/api`;
 const app = express();
 const port = 3000;
 // Middleware to parse JSON bodies
