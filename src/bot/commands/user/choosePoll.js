@@ -12,7 +12,7 @@ const choosePoll = async (ctx) => {
     }
     const user = await User.findOne({ telegramId: ctx.from.id });
 
-    const existingVote = user.votes.find((vote) => vote.pollId === pollId);
+    const existingVote = user?.votes?.find((vote) => vote.pollId === pollId);
 
     if (!user) {
       await ctx.answerCbQuery("Сиз рўйхатдан ўтмагансиз");
@@ -21,7 +21,7 @@ const choosePoll = async (ctx) => {
 
     let buttons = poll.options.map((option, index) => [
       Markup.button.callback(
-        `(${option.votes}) ${option.text} ${
+        `(${option?.votes}) ${option.text} ${
           existingVote && existingVote.optionIndex === index ? " ✅" : ""
         }`,
         `vote_${pollId}_${index}`,
