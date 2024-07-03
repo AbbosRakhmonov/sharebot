@@ -27,6 +27,7 @@ const start = async () => {
           drop_pending_updates: true,
         }),
       );
+      console.log("Bot launched in production mode");
     } else {
       bot.launch(() => console.log("Bot launched in development mode"));
 
