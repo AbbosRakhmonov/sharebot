@@ -1,10 +1,19 @@
 const User = require("../../models/user");
-const logger = require("../../utils/logger");
 const { userKeyboards, adminKeyboards } = require("../../utils/keyboards");
+const checkPhoneNumber = require("../../utils/checkPhoneNumber");
 module.exports = async (ctx) => {
   try {
     const phoneNumber = ctx.message.contact.phone_number;
     const telegramId = ctx.message.contact.user_id;
+
+    if(checkPhoneNumber(phoneNumber)) {
+      return await ctx.reply("❗️Узур, ботдан <b></i>Ҳуманс</i></b> компанияси мижозлари фойдалана олишолмайди!",{
+        reply_markup: {
+          remove_keyboard: true
+        },
+        parse_mode: "HTML"
+      });
+    }
 
     let user = await User.findOne({ telegramId });
 

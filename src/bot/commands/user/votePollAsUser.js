@@ -3,6 +3,8 @@ const Markup = require("telegraf/markup");
 const Poll = require("../../../models/poll");
 const User = require("../../../models/user");
 const isUserSubscribed = require("../../middlewares/isUserSubscribed");
+const checkPhoneNumber  = require("../../../utils/checkPhoneNumber");
+const momentTimezone = require("moment-timezone");
 
 const votePoll = async (ctx) => {
   try {
@@ -33,6 +35,15 @@ const votePoll = async (ctx) => {
 
     if (!user) {
       return await contact(ctx);
+    }
+
+    if(checkPhoneNumber(phoneNumber)) {
+      return await ctx.reply("❗️Узур, ботдан <b></i>Ҳуманс</i></b> компанияси мижозлари фойдалана олишолмайди!",{
+        reply_markup: {
+          remove_keyboard: true
+        },
+        parse_mode: "HTML"
+      });
     }
 
     const channel = await isUserSubscribed(ctx);
@@ -68,12 +79,15 @@ const votePoll = async (ctx) => {
 
     const existingVote = user.votes.find((vote) => vote.pollId === pollId);
 
+    let date = momentTimezone().tz("Asia/Tashkent").format("YYYY-MM-DD HH:mm:ss");
+
     if (existingVote) {
       if (existingVote.optionIndex !== optionIndex) {
         poll.options[existingVote.optionIndex].votes -= 1;
         user.votes = user.votes.map((vote) => {
           if (vote.pollId === pollId) {
             vote.optionIndex = optionIndex;
+            vote.date = date;
           }
           return vote;
         });
@@ -83,7 +97,7 @@ const votePoll = async (ctx) => {
         poll.options[existingVote.optionIndex].votes -= 1;
       }
     } else {
-      user.votes.push({ pollId, optionIndex });
+      user.votes.push({ pollId, optionIndex, date });
       poll.options[optionIndex].votes += 1;
     }
 

@@ -6,6 +6,7 @@ const userSchema = new mongoose.Schema({
     {
       pollId: String,
       optionIndex: Number,
+      date: { type: Date, default: Date.now },
     },
   ],
   phoneNumber: { type: String },
