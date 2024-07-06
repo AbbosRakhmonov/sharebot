@@ -37,7 +37,7 @@ const votePoll = async (ctx) => {
       return await contact(ctx);
     }
 
-    if(checkPhoneNumber(phoneNumber)) {
+    if(checkPhoneNumber(user.phoneNumber)) {
       return await ctx.reply("❗️Узур, ботдан <b></i>Ҳуманс</i></b> компанияси мижозлари фойдалана олишолмайди!",{
         reply_markup: {
           remove_keyboard: true
