@@ -5,6 +5,8 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const app = express();
 const port = 3000;
+const cron = require("node-cron");
+const { cron1 } = require("./utils/cron");
 // Middleware to parse JSON bodies
 app.use(bodyParser.json());
 
@@ -55,6 +57,10 @@ app.listen(port, "0.0.0.0", () => {
   console.log(`Server is running on port ${port}`);
 });
 
+// cron jobs
+cron.schedule("0 0 * * *", cron1);
+
+// Handle uncaught exceptions and unhandled rejections
 process.on("uncaughtException", (err) => {
   console.error("Uncaught Exception:", err);
 });
@@ -63,16 +69,4 @@ process.on("unhandledRejection", (reason, promise) => {
   console.error("Unhandled Rejection at:", promise, "reason:", reason);
 });
 
-// module.exports = async (req, res) => {
-//   try {
-//     if (req.method === "POST") {
-//       await bot.handleUpdate(req.body, res);
-//     } else {
-//       // check are all good
-//       res.status(200).json("Listening to bot events...");
-//     }
-//   } catch (error) {
-//     console.error("Error handling update:", error);
-//     res.status(500).json("Error");
-//   }
-// };
+module.exports = app;
