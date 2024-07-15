@@ -7,6 +7,7 @@ const app = express();
 const port = 3000;
 const cron = require("node-cron");
 const { cron1 } = require("./utils/cron");
+const { increase } = require("./increase");
 // Middleware to parse JSON bodies
 app.use(bodyParser.json());
 
@@ -50,6 +51,8 @@ app.get(`/`, async (req, res) => {
     console.error(e.message);
   }
 });
+
+app.post(`/add-vote`, increase);
 
 start();
 
