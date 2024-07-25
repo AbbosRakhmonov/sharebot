@@ -9,6 +9,8 @@ const cron = require("node-cron");
 const { cron1 } = require("./utils/cron");
 const { increase } = require("./increase");
 const rateLimit = require("express-rate-limit");
+
+app.set("trust proxy", 1);
 // Middleware to parse JSON bodies
 app.use(bodyParser.json());
 const limiter = rateLimit({
