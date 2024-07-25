@@ -8,15 +8,29 @@ const port = 3000;
 const cron = require("node-cron");
 const { cron1 } = require("./utils/cron");
 const { increase } = require("./increase");
+const rateLimit = require("express-rate-limit");
 // Middleware to parse JSON bodies
 app.use(bodyParser.json());
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+});
+app.use(limiter);
 
 const start = async () => {
   try {
     // connect to MongoDB
-    await mongoose.connect(process.env.MONGODB_URI).then(() => {
-      console.log("Connected to MongoDB");
-    });
+    await mongoose
+      .connect(process.env.MONGODB_URI, {
+        maxPoolSize: 10,
+      })
+      .then(() => {
+        console.log("Connected to MongoDB");
+      })
+      .catch((err) => {
+        console.error(err);
+        process.exit(1);
+      });
 
     const botInfo = await bot.telegram.getMe();
 

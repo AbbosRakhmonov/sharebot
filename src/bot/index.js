@@ -1,4 +1,5 @@
 const { Telegraf, session } = require("telegraf");
+const rateLimit = require("telegraf-ratelimit");
 const { message } = require("telegraf/filters");
 const tracker = require("./middlewares/tracker");
 const auth = require("./middlewares/auth");
@@ -32,6 +33,13 @@ const deleteChannel = require("./commands/admin/deleteChannel");
 
 require("dotenv").config();
 
+const limitConfig = {
+  window: 1000,
+  limit: 1,
+  onLimitExceeded: (ctx, next) =>
+    ctx.reply("⚠️ Ботда киримларни чекловчи механизм ишламоқда, кутинг!"),
+};
+
 // Create a new bot instance
 const bot = new Telegraf(process.env.BOT_TOKEN);
 console.log(process.env.BOT_TOKEN, process.env.NODE_ENV);
@@ -40,6 +48,7 @@ console.log(process.env.BOT_TOKEN, process.env.NODE_ENV);
 bot.use(session());
 bot.use(tracker);
 bot.use(auth);
+bot.use(rateLimit(limitConfig));
 // check bot blocked or not by user
 bot.use(async (ctx, next) => {
   try {
