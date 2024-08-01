@@ -9,3 +9,4 @@
 .vercel
 yarn.lock
 .env.production
+.env.development

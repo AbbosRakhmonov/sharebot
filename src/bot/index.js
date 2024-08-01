@@ -30,13 +30,16 @@ const getAllChannels = require("./commands/admin/getAllChannels");
 const addChannel = require("./commands/admin/addChannel");
 const saveChannel = require("./commands/admin/saveChannel");
 const deleteChannel = require("./commands/admin/deleteChannel");
+const checkIsUserBot = require("./middlewares/checkIsUserBot");
+const refreshCaptcha = require("./commands/user/refreshCaptcha");
+const continueVoting = require("./commands/user/continueVoting");
 
 require("dotenv").config();
 
 const limitConfig = {
   window: 1000,
   limit: 1,
-  onLimitExceeded: (ctx, next) =>
+  onLimitExceeded: (ctx) =>
     ctx.reply("⚠️ Ботда киримларни чекловчи механизм ишламоқда, кутинг!"),
 };
 
@@ -49,6 +52,7 @@ bot.use(session());
 bot.use(tracker);
 bot.use(auth);
 bot.use(rateLimit(limitConfig));
+bot.use(checkIsUserBot);
 // check bot blocked or not by user
 bot.use(async (ctx, next) => {
   try {
@@ -120,6 +124,10 @@ bot.on(["message", "edited_message"], async (ctx, next) => {
     default:
       break;
   }
+
+  if (user.step.includes("captcha")) {
+    await continueVoting(ctx);
+  }
 });
 
 // custom functions
@@ -142,5 +150,6 @@ bot.action(/vote_/, vote);
 bot.action(/subscribe_/, subscribe);
 bot.action(/add-channel/, checkIsAdmin, addChannel);
 bot.action(/delete-channel_/, checkIsAdmin, deleteChannel);
+bot.action(/refresh_captcha/, refreshCaptcha);
 
 module.exports = bot;

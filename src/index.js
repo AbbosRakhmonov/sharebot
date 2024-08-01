@@ -1,5 +1,7 @@
 const mongoose = require("mongoose");
-require("dotenv").config();
+require("dotenv").config({
+  path: `.env.${process.env.NODE_ENV}`,
+});
 const bot = require("./bot");
 const express = require("express");
 const bodyParser = require("body-parser");
@@ -7,7 +9,6 @@ const app = express();
 const port = 3000;
 const cron = require("node-cron");
 const { cron1 } = require("./utils/cron");
-const { increase } = require("./increase");
 const rateLimit = require("express-rate-limit");
 
 app.set("trust proxy", 1);
@@ -18,6 +19,19 @@ const limiter = rateLimit({
   max: 100, // limit each IP to 100 requests per windowMs
 });
 app.use(limiter);
+
+app.get(`/`, async (req, res) => {
+  try {
+    res.status(200).send("OK");
+  } catch (e) {
+    res.status(500).send("Server Error");
+    console.error(e.message);
+  }
+});
+
+app.listen(port, "0.0.0.0", () => {
+  console.log(`Server is running on port ${port}`);
+});
 
 const start = async () => {
   try {
@@ -59,22 +73,7 @@ const start = async () => {
   }
 };
 
-app.get(`/`, async (req, res) => {
-  try {
-    res.status(200).send("OK");
-  } catch (e) {
-    res.status(500).send("Server Error");
-    console.error(e.message);
-  }
-});
-
-app.post(`/add-vote`, increase);
-
 start();
-
-app.listen(port, "0.0.0.0", () => {
-  console.log(`Server is running on port ${port}`);
-});
 
 // cron jobs
 cron.schedule("0 0 * * *", cron1);
