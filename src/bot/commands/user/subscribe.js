@@ -4,13 +4,10 @@ const isUserSubscribed = require("../../middlewares/isUserSubscribed");
 
 const checkUserSubscribtion = async (ctx, channel) => {
   try {
-    console.log(channel);
     const chatMember = await ctx.telegram.getChatMember(
       "@" + channel,
-      ctx.from.id,
+      ctx.from.id
     );
-
-    console.log(chatMember);
 
     if (chatMember.status === "left" || chatMember.status === "kicked") {
       return true;
@@ -44,10 +41,15 @@ const subscribe = async (ctx, next) => {
 
     ctx.user = user;
 
-    await isUserSubscribed(ctx, next);
+    const res = await isUserSubscribed(ctx, user);
+    if (res) {
+      return;
+    }
 
     await ctx.deleteMessage();
-    await ctx.answerCbQuery("Сиз каналга обуна бўлингиз, рахмат!");
+    await ctx.answerCbQuery(
+      "Сиз каналга обуна бўлингиз, рахмат! Овоз беришда давом этишингиз мумкин."
+    );
   } catch (error) {
     console.error("Хатолик:", { error });
     await ctx.answerCbQuery("Хатолик юз берди. Кайтадан уриниб кўринг");

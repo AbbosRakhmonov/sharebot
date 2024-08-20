@@ -45,39 +45,13 @@ const votePoll = async (ctx) => {
             remove_keyboard: true,
           },
           parse_mode: "HTML",
-        },
+        }
       );
     }
 
-    const channel = await isUserSubscribed(ctx);
-
-    if (channel) {
-      user.channels = user.channels.filter((ch) => ch !== channel);
-      await user.save();
-      await ctx.deleteMessage();
-
-      return await ctx.reply(
-        "❗️Илтимос, сўровномада иштирок этиш учун қуйидаги каналга аъзо бўлинг.",
-        {
-          reply_markup: {
-            inline_keyboard: [
-              [
-                Markup.button.url(
-                  "Каналга обуна бўлиш",
-                  `https://t.me/${channel}`,
-                ),
-              ],
-              [
-                Markup.button.callback(
-                  "✅ Обуна бўлдим",
-                  `subscribe_${channel}`,
-                ),
-              ],
-            ],
-            resize_keyboard: true,
-          },
-        },
-      );
+    const res = await isUserSubscribed(ctx, user);
+    if (res) {
+      return;
     }
 
     // captcha like blackboard
@@ -105,7 +79,7 @@ const votePoll = async (ctx) => {
             [Markup.button.callback("🔄 Тасвирни янгилаш", `refresh_captcha`)],
           ],
         },
-      },
+      }
     );
     await ctx.answerCbQuery();
   } catch (error) {
