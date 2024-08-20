@@ -5,9 +5,7 @@ const {
 
 async function isUserSubscribed(ctx) {
   try {
-    const channels = await Channel.find({
-      username: { $nin: ctx.user?.channels || [] },
-    }).lean();
+    const channels = await Channel.find({}).lean();
 
     channels.push({ username: process.env.TRACKED_CHANNEL.split("@")[1] });
 
