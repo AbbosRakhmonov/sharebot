@@ -37,7 +37,7 @@ const continueVoting = require("./commands/user/continueVoting");
 require("dotenv").config();
 
 const limitConfig = {
-  window: 3000,
+  window: 1000,
   limit: 1,
   onLimitExceeded: (ctx) =>
     ctx.reply("⚠️ Сўровингиз қайта ишланмоқда илтимос сабрли бўлинг !"),
