@@ -9,8 +9,8 @@ const trackedChannelUsername = process.env.TRACKED_CHANNEL.split("@")[1];
 
 const checkIsUserSubscribedAllChannels = async (channels, bot, telegramId) => {
   const results = await Promise.all(
-    channels.map((channel) =>
-      bot.telegram
+    channels.map(async (channel) =>
+      await bot.telegram
         .getChatMember("@" + channel.username, telegramId)
         .then((chatMember) => ({
           status: chatMember.status,
@@ -79,7 +79,7 @@ const cron1 = async () => {
               .map((poll) => poll._id.toString())
               .includes(vote.pollId),
         );
-        await Promise.all(activePolls.map((poll) => poll.save()));
+        await Promise.all(activePolls.map(async (poll) => await poll.save()));
         await user.save();
         await bot.telegram.sendMessage(
           user.telegramId,
