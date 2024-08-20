@@ -37,10 +37,10 @@ const continueVoting = require("./commands/user/continueVoting");
 require("dotenv").config();
 
 const limitConfig = {
-  window: 1000,
+  window: 3000,
   limit: 1,
   onLimitExceeded: (ctx) =>
-    ctx.reply("⚠️ Ботда киримларни чекловчи механизм ишламоқда, кутинг!"),
+    ctx.reply("⚠️ Сўровингиз қайта ишланмоқда илтимос сабрли бўлинг !"),
 };
 
 // Create a new bot instance
