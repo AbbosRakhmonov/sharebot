@@ -4,10 +4,13 @@ const isUserSubscribed = require("../../middlewares/isUserSubscribed");
 
 const checkUserSubscribtion = async (ctx, channel) => {
   try {
+    console.log(channel);
     const chatMember = await ctx.telegram.getChatMember(
       "@" + channel,
       ctx.from.id,
     );
+
+    console.log(chatMember);
 
     if (chatMember.status === "left" || chatMember.status === "kicked") {
       return true;
