@@ -45,6 +45,7 @@ const choosePoll = async (ctx) => {
     } finally {
       await ctx.answerCbQuery();
     }
+    return;
   } catch (error) {
     console.error("Хатолик:", { error });
 

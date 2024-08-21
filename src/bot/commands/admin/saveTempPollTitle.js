@@ -13,9 +13,9 @@ const saveTempPollTitle = async (ctx) => {
         tempPollMessageId: null,
         tempPollOptions: [],
       },
-    );
+    ).lean();
 
-    await ctx.reply("Сўровномани узини юборинг", {
+    return await ctx.reply("Сўровномани узини юборинг", {
       reply_markup: {
         keyboard: doneAndCancelKeyboard,
         resize_keyboard: true,

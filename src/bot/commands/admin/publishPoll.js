@@ -38,7 +38,7 @@ const publishPoll = async (ctx) => {
     poll.messagsIdInChannel = messsage.message_id;
     await poll.save();
 
-    await ctx.answerCbQuery("Сўровнома каналга юборилди");
+    return await ctx.answerCbQuery("Сўровнома каналга юборилди");
   } catch (error) {
     console.error("Хатолик:", { error });
     await ctx.answerCbQuery("Хатолик. Кайтадан уриниб кўринг");

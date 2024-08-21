@@ -14,7 +14,7 @@ const addChannel = async (ctx) => {
         parse_mode: "HTML",
       },
     );
-    await ctx.answerCbQuery();
+    return await ctx.answerCbQuery();
   } catch (err) {
     console.error(err);
     ctx.answerCbQuery("Хатолик юз берди");

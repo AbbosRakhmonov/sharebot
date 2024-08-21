@@ -5,6 +5,7 @@ const seePoll = async (ctx) => {
   try {
     const pollId = ctx.callbackQuery.data.split("_")[1];
     const poll = await Poll.findById(pollId).lean();
+
     if (!poll) {
       return await ctx.answerCbQuery("Сўровнома топилмади");
     }
@@ -33,9 +34,9 @@ const seePoll = async (ctx) => {
     });
 
     if (buttons.length === 0) {
-      await ctx.answerCbQuery("Вариантлар мавжуд эмас");
+      return await ctx.answerCbQuery("Вариантлар мавжуд эмас");
     } else {
-      await ctx.answerCbQuery();
+      return await ctx.answerCbQuery();
     }
   } catch (error) {
     console.error("Хатолик:", error);

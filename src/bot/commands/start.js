@@ -5,7 +5,7 @@ const start = async (ctx) => {
   try {
     const user = await User.findOne({ telegramId: ctx.from.id });
     if (!user) {
-      await contact(ctx);
+      return await contact(ctx);
     } else {
       if (ctx.from.id !== parseInt(process.env.ADMIN_CHAT_ID, 10)) {
         await ctx.reply(
@@ -33,7 +33,7 @@ const start = async (ctx) => {
       user.tempPollMessageId = null;
       user.currentPollId = null;
       user.tempPollOption = "";
-      await user.save();
+      return await user.save();
     }
   } catch (error) {
     console.error("Хатолик:", error);

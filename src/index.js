@@ -29,27 +29,19 @@ app.get(`/`, async (req, res) => {
   }
 });
 
-app.listen(port, "0.0.0.0", () => {
+const server = app.listen(port, "0.0.0.0", () => {
   console.log(`Server is running on port ${port}`);
 });
 
 const start = async () => {
   try {
     // connect to MongoDB
-    await mongoose
-      .connect(process.env.MONGODB_URI, {
-        maxPoolSize: 10,
-      })
-      .then(() => {
-        console.log("Connected to MongoDB");
-      })
-      .catch((err) => {
-        console.error(err);
-        process.exit(1);
-      });
+    await mongoose.connect(process.env.MONGODB_URI, {
+      maxPoolSize: 10,
+    });
+    console.log("Connected to MongoDB");
 
     const botInfo = await bot.telegram.getMe();
-
     console.log(botInfo);
 
     if (process.env.NODE_ENV === "production") {
@@ -81,10 +73,25 @@ cron.schedule("0 0 * * *", cron1);
 // Handle uncaught exceptions and unhandled rejections
 process.on("uncaughtException", (err) => {
   console.error("Uncaught Exception:", err);
+  process.exit(1);
 });
 
 process.on("unhandledRejection", (reason, promise) => {
   console.error("Unhandled Rejection at:", promise, "reason:", reason);
+  process.exit(1);
 });
+
+const shutdown = () => {
+  server.close(() => {
+    console.log("HTTP server closed");
+    mongoose.connection.close(false, () => {
+      console.log("MongoDB connection closed");
+      process.exit(0);
+    });
+  });
+};
+
+process.on("SIGINT", shutdown);
+process.on("SIGTERM", shutdown);
 
 module.exports = app;

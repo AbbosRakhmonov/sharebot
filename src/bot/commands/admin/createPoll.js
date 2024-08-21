@@ -13,7 +13,7 @@ const createPoll = async (ctx) => {
       },
     ).lean();
 
-    await ctx.reply("Сўровноманинг номини юборинг", {
+    return await ctx.reply("Сўровноманинг номини юборинг", {
       reply_markup: {
         keyboard: doneAndCancelKeyboard,
         resize_keyboard: true,

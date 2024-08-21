@@ -13,8 +13,8 @@ const deletePoll = async (ctx) => {
           votes: { pollId },
         },
       },
-    );
-    const polls = await Poll.find({});
+    ).lean();
+    const polls = await Poll.find({}).lean();
     if (polls.length === 0) {
       return await ctx.answerCbQuery("Сўровнома топилмади");
     }
@@ -39,7 +39,7 @@ const deletePoll = async (ctx) => {
       inline_keyboard: flattenedButtons,
       resize_keyboard: true,
     });
-    await ctx.answerCbQuery("Сўровнома ўчирилди");
+    return await ctx.answerCbQuery("Сўровнома ўчирилди");
   } catch (error) {
     console.error("Хатолик:", error);
     await ctx.answerCbQuery("Хатолик. Кайтадан уриниб кўринг");

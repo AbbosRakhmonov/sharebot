@@ -40,7 +40,7 @@ module.exports = async (ctx) => {
         },
       },
     );
-    await ctx.answerCbQuery();
+    return await ctx.answerCbQuery();
   } catch (error) {
     console.error("Хатолик:", { error });
     await ctx.answerCbQuery("Хатолик. Кайтадан уриниб кўринг");

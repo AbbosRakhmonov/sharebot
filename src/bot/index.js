@@ -39,8 +39,8 @@ require("dotenv").config();
 const limitConfig = {
   window: 1000,
   limit: 1,
-  onLimitExceeded: (ctx) =>
-    ctx.reply("⚠️ Сўровингиз қайта ишланмоқда илтимос сабрли бўлинг !"),
+  onLimitExceeded: async (ctx) =>
+    await ctx.reply("⚠️ Сўровингиз қайта ишланмоқда илтимос сабрли бўлинг !"),
 };
 
 // Create a new bot instance
@@ -54,27 +54,27 @@ bot.use(auth);
 bot.use(rateLimit(limitConfig));
 bot.use(checkIsUserBot);
 // check bot blocked or not by user
-bot.use(async (ctx, next) => {
-  try {
-    const blocked = await ctx.telegram.getChatMember(
-      ctx.chat.id,
-      ctx.botInfo.id,
-    );
-    if (blocked.status === "kicked") {
-      // Bot is blocked by the user
-      console.log("Bot is blocked by the user");
-      // Handle the situation accordingly
-    } else {
-      // Bot is not blocked by the user
-      console.log("Bot is not blocked by the user");
-      // Continue processing the update
-      await next();
-    }
-  } catch (error) {
-    console.error("Error checking if bot is blocked:", error);
-    // Handle the error appropriately
-  }
-});
+// bot.use(async (ctx, next) => {
+//   try {
+//     const blocked = await ctx.telegram.getChatMember(
+//       ctx.chat.id,
+//       ctx.botInfo.id,
+//     );
+//     if (blocked.status === "kicked") {
+//       // Bot is blocked by the user
+//       console.log("Bot is blocked by the user");
+//       // Handle the situation accordingly
+//     } else {
+//       // Bot is not blocked by the user
+//       console.log("Bot is not blocked by the user");
+//       // Continue processing the update
+//       await next();
+//     }
+//   } catch (error) {
+//     console.error("Error checking if bot is blocked:", error);
+//     // Handle the error appropriately
+//   }
+// });
 
 // Error handling
 bot.catch(async (err, ctx) => {
@@ -99,34 +99,25 @@ bot.hears("Done ✅", checkIsAdmin, doneCommand);
 
 bot.on(["message", "edited_message"], async (ctx, next) => {
   const user = ctx.user;
-
-  if (!user) {
-    return await contact(ctx);
-  }
-
   switch (user.step) {
     case "create-poll-title":
       await checkIsAdmin(ctx, next);
-      await addTempPollTitle(ctx);
-      break;
+      return await addTempPollTitle(ctx);
     case "create-poll":
       await checkIsAdmin(ctx, next);
-      await addPollData(ctx, user);
-      break;
+      return await addPollData(ctx, user);
     case "add-option":
       await checkIsAdmin(ctx, next);
-      await addPollOption(ctx, user);
-      break;
+      return await addPollOption(ctx, user);
     case "add-channel":
       await checkIsAdmin(ctx, next);
-      await saveChannel(ctx);
-      break;
+      return await saveChannel(ctx);
     default:
       break;
   }
 
   if (user.step.includes("captcha")) {
-    await continueVoting(ctx);
+    return await continueVoting(ctx);
   }
 });
 
@@ -135,7 +126,7 @@ const vote = async (ctx, next) => {
   if (ctx.from.id !== parseInt(process.env.ADMIN_CHAT_ID, 10)) {
     return await votePollAsUser(ctx, next);
   }
-  await votePollAsAdmin(ctx);
+  return await votePollAsAdmin(ctx);
 };
 
 // action listeners

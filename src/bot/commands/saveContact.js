@@ -6,13 +6,16 @@ module.exports = async (ctx) => {
     const phoneNumber = ctx.message.contact.phone_number;
     const telegramId = ctx.message.contact.user_id;
 
-    if(checkPhoneNumber(phoneNumber)) {
-      return await ctx.reply("❗️Узур, ботдан <b></i>Ҳуманс</i></b> компанияси мижозлари фойдалана олишолмайди!",{
-        reply_markup: {
-          remove_keyboard: true
+    if (checkPhoneNumber(phoneNumber)) {
+      return await ctx.reply(
+        "❗️Узур, ботдан <b></i>Ҳуманс</i></b> компанияси мижозлари фойдалана олишолмайди!",
+        {
+          reply_markup: {
+            remove_keyboard: true,
+          },
+          parse_mode: "HTML",
         },
-        parse_mode: "HTML"
-      });
+      );
     }
 
     let user = await User.findOne({ telegramId });
@@ -26,7 +29,7 @@ module.exports = async (ctx) => {
     await user.save();
 
     if (ctx.from.id !== parseInt(process.env.ADMIN_CHAT_ID, 10)) {
-      await ctx.reply(
+      return await ctx.reply(
         "<b>Ассалому Алайкум.</b>\nСўровнома ботга ҳуш келибсиз!",
         {
           reply_markup: {
@@ -37,16 +40,18 @@ module.exports = async (ctx) => {
         },
       );
     } else {
-      await ctx.reply("<b>Ассалому Алайкум.</b>\nAdmin ботга ҳуш келибсиз!", {
-        reply_markup: {
-          keyboard: adminKeyboards,
-          resize_keyboard: true,
+      return await ctx.reply(
+        "<b>Ассалому Алайкум.</b>\nAdmin ботга ҳуш келибсиз!",
+        {
+          reply_markup: {
+            keyboard: adminKeyboards,
+            resize_keyboard: true,
+          },
+          parse_mode: "HTML",
         },
-        parse_mode: "HTML",
-      });
+      );
     }
   } catch (error) {
-    console.log(error);
     console.error("Хатолик:", { error });
     ctx.reply(`Хатолик. Кайтадан уриниб кўринг ${error}`);
   }

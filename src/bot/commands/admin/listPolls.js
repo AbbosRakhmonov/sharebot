@@ -7,7 +7,7 @@ const listPolls = async (ctx) => {
     const polls = await Poll.find({}).lean();
 
     if (polls.length === 0) {
-      return ctx.reply("Сўровномалар мавжуд эмас!");
+      return await ctx.reply("Сўровномалар мавжуд эмас!");
     }
 
     // sennd pollList as inline button with publish button next to it and when user click on that button it will toggle active property when publish button is clicked it will publish the poll
@@ -24,7 +24,7 @@ const listPolls = async (ctx) => {
     // Flatten the buttons array for Telegraf
     const flattenedButtons = [].concat(...buttons);
 
-    await ctx.reply(`<b>Сўровномалар:</b>`, {
+    return await ctx.reply(`<b>Сўровномалар:</b>`, {
       reply_markup: {
         inline_keyboard: flattenedButtons,
         resize_keyboard: true,

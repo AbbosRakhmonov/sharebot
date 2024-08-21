@@ -83,13 +83,11 @@ const votePoll = async (ctx) => {
       let channelButtons = poll.options.map((option, index) => [
         Markup.button.url(
           `(${option.votes}) ${option.text}`,
-          `https://t.me/${
-            ctx.botInfo.username
-          }/?start=${pollId}_${index}`,
+          `https://t.me/${ctx.botInfo.username}/?start=${pollId}_${index}`,
         ),
       ]);
 
-      await ctx.telegram.editMessageReplyMarkup(
+      await ctx.telegram.editMessageReplyMarkup( 
         process.env.TRACKED_CHANNEL,
         poll.messagsIdInChannel,
         null,
@@ -97,7 +95,7 @@ const votePoll = async (ctx) => {
           inline_keyboard: channelButtons,
         },
       );
-      await ctx.answerCbQuery();
+      return await ctx.answerCbQuery();
     }
   } catch (error) {
     console.error("Хатолик:", error);

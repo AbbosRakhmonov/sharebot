@@ -25,7 +25,7 @@ const savePollData = async (ctx, user) => {
       options: [],
     });
 
-    await ctx.reply("Сўровнома мўваффаккиятли яратилди", {
+    return await ctx.reply("Сўровнома мўваффаккиятли яратилди", {
       reply_markup: {
         keyboard: adminKeyboards,
         resize_keyboard: true,

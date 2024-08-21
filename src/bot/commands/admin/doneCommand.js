@@ -4,14 +4,11 @@ const saveTempPollOption = require("./saveTempPollOption");
 const doneCommand = async (ctx) => {
   switch (ctx.user.step) {
     case "create-poll-title":
-      await saveTempPollTitle(ctx);
-      break;
+      return await saveTempPollTitle(ctx);
     case "create-poll":
-      await savePollData(ctx, ctx.user);
-      break;
+      return await savePollData(ctx, ctx.user);
     case "add-option":
-      await saveTempPollOption(ctx);
-      break;
+      return await saveTempPollOption(ctx);
     default:
       break;
   }

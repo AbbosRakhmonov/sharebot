@@ -9,7 +9,7 @@ const addTempPollTitle = async (ctx) => {
       return await ctx.reply("Илтимос сўровнома номини юборинг");
     }
 
-    await User.findOneAndUpdate(
+    return await User.findOneAndUpdate(
       { telegramId: ctx.from.id },
       { tempPollTitle },
     ).lean();

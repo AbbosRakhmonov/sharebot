@@ -1,7 +1,10 @@
 const checkIsUserSubscribedAllChannels = async (channels, ctx) => {
   const promises = channels.map(async (channel) => {
     try {
-      const chatMember = await ctx.telegram.getChatMember("@" + channel.username, ctx.from.id);
+      const chatMember = await ctx.telegram.getChatMember(
+        "@" + channel.username,
+        ctx.from.id,
+      );
       return { chatMember, channel };
     } catch (error) {
       return { error, channel };
@@ -16,7 +19,10 @@ const checkIsUserSubscribedAllChannels = async (channels, ctx) => {
         result.chatMember.status === "left" ||
         result.chatMember.status === "kicked",
     )
-    .map((result) => result.channel.username);
+    .map((result) => ({
+      username: result.channel.username,
+      name: result.channel.name,
+    }));
 
   return unSubscribedChannels;
 };

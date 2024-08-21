@@ -6,7 +6,7 @@ const checkUserSubscribtion = async (ctx, channel) => {
   try {
     const chatMember = await ctx.telegram.getChatMember(
       "@" + channel,
-      ctx.from.id
+      ctx.from.id,
     );
 
     if (chatMember.status === "left" || chatMember.status === "kicked") {
@@ -20,7 +20,7 @@ const checkUserSubscribtion = async (ctx, channel) => {
   }
 };
 
-const subscribe = async (ctx, next) => {
+const subscribe = async (ctx) => {
   try {
     const channel = ctx.callbackQuery.data.split("_")[1];
     const user = await User.findOne({ telegramId: ctx.from.id });
@@ -42,13 +42,15 @@ const subscribe = async (ctx, next) => {
     ctx.user = user;
 
     const res = await isUserSubscribed(ctx, user);
+
     if (res) {
       return;
     }
 
     await ctx.deleteMessage();
-    await ctx.answerCbQuery(
-      "Сиз каналга обуна бўлингиз, рахмат! Овоз беришда давом этишингиз мумкин."
+    return await ctx.answerCbQuery(
+      "Сиз каналга обуна бўлингиз, рахмат! Овоз беришда давом этишингиз мумкин.\n\n🔔 Эслатма: Агарда каналлардан чиқиб кетсангиз овозларингиз бекор қилинади!",
+      { show_alert: true, cache_time: 1, is_personal: true },
     );
   } catch (error) {
     console.error("Хатолик:", { error });

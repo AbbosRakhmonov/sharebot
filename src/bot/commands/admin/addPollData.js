@@ -15,7 +15,7 @@ const addPollData = async (ctx, user) => {
       return await ctx.reply("Илтимос сўровномани узини юборинг");
     }
 
-    await User.findOneAndUpdate(
+    return await User.findOneAndUpdate(
       { telegramId: user.telegramId },
       { tempPollMessageId },
     ).lean();

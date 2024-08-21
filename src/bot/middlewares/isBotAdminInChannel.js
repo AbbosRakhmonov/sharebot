@@ -1,5 +1,3 @@
-const logger = require("../../utils/logger");
-
 async function isBotAdminInChannel(ctx, next) {
   try {
     const chatMember = await ctx.telegram.getChatMember(
@@ -13,6 +11,7 @@ async function isBotAdminInChannel(ctx, next) {
   } catch (error) {
     console.error("Ботни каналдаги ўрнини текширишда хатолик:", { error });
     ctx.reply(`Ботни каналдаги ўрнини текширишда хатолик: ${error}`);
+    throw new Error("Ботни каналдаги ўрнини текширишда хатолик");
   }
 }
 

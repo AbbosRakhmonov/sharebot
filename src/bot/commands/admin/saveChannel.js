@@ -19,12 +19,12 @@ const saveChannel = async (ctx) => {
       channel = await ctx.telegram.getChat(text);
     } catch (err) {
       console.error(err);
-      return ctx.reply("Канал топилмади");
+      return await ctx.reply("Канал топилмади");
     }
 
     const botMember = await ctx.telegram.getChatMember(text, ctx.botInfo.id);
     if (!["administrator", "creator"].includes(botMember.status)) {
-      return ctx.reply("Бот каналда админ эмас");
+      return await ctx.reply("Бот каналда админ эмас");
     }
 
     await Channel.create({

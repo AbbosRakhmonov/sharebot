@@ -14,7 +14,7 @@ const clearLastStep = async (ctx) => {
         tempPollOption: "",
       },
     ).lean();
-    await ctx.reply("Буйруқ бекор қилинди", {
+    return await ctx.reply("Буйруқ бекор қилинди", {
       reply_markup: {
         keyboard: adminKeyboards,
         resize_keyboard: true,

@@ -24,7 +24,7 @@ const createPollOption = async (ctx) => {
         resize_keyboard: true,
       },
     });
-    await ctx.answerCbQuery();
+    return await ctx.answerCbQuery();
   } catch (error) {
     console.error("Хатолик:", { error });
     await ctx.answerCbQuery("Хатолик. Кайтадан уриниб кўринг");

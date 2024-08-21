@@ -27,7 +27,7 @@ const deletePollOption = async (ctx) => {
           votes: { pollId, optionIndex },
         },
       },
-    );
+    ).lean();
 
     const newPoll = await Poll.findById(pollId).lean();
 
@@ -48,10 +48,11 @@ const deletePollOption = async (ctx) => {
     await ctx.editMessageReplyMarkup({
       inline_keyboard: buttons,
     });
-    await ctx.answerCbQuery("Вариант ўчирилди");
+    return await ctx.answerCbQuery("Вариант ўчирилди");
   } catch (error) {
     console.error("Хатолик:", { error });
     await ctx.answerCbQuery("Хатолик. Кайтадан уриниб кўринг");
+    throw new Error("Хатолик");
   }
 };
 

@@ -19,7 +19,7 @@ const addPollOption = async (ctx, user) => {
       return await ctx.reply("Сўровномани вариантини юборинг");
     }
 
-    await User.findOneAndUpdate(
+    return await User.findOneAndUpdate(
       { telegramId: ctx.from.id },
       { tempPollOption: pollOption },
     ).lean();

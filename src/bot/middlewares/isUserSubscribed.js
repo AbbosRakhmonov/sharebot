@@ -12,37 +12,38 @@ async function isUserSubscribed(ctx, user) {
 
     const unSubscribedChannels = await checkIsUserSubscribedAllChannels(
       channels,
-      ctx
+      ctx,
     );
 
     if (unSubscribedChannels.length !== 0) {
-      const channel = unSubscribedChannels[0];
-      user.channels = user.channels.filter((ch) => ch !== channel);
+      const { name, username } = unSubscribedChannels[0];
+      user.channels = user.channels.filter((ch) => ch !== username);
       await user.save();
       ctx.user = user;
-      await ctx.deleteMessage();
+      ctx.deleteMessage();
 
       return ctx.reply(
-        "❗️Илтимос, сўровномада иштирок этиш учун қуйидаги каналга аъзо бўлинг.",
+        `❗️Илтимос, сўровномада иштирок этиш учун қуйидаги\n\n<b><i>${name}</i></b>\n\nканалига аъзо бўлинг.`,
         {
           reply_markup: {
             inline_keyboard: [
               [
                 Markup.button.url(
                   "Каналга обуна бўлиш",
-                  `https://t.me/${channel}`
+                  `https://t.me/${username}`,
                 ),
               ],
               [
                 Markup.button.callback(
                   "✅ Обуна бўлдим",
-                  `subscribe_${channel}`
+                  `subscribe_${username}`,
                 ),
               ],
             ],
             resize_keyboard: true,
           },
-        }
+          parse_mode: "HTML",
+        },
       );
     }
     return;

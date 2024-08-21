@@ -45,7 +45,7 @@ const votePoll = async (ctx) => {
             remove_keyboard: true,
           },
           parse_mode: "HTML",
-        }
+        },
       );
     }
 
@@ -79,9 +79,9 @@ const votePoll = async (ctx) => {
             [Markup.button.callback("🔄 Тасвирни янгилаш", `refresh_captcha`)],
           ],
         },
-      }
+      },
     );
-    await ctx.answerCbQuery();
+    return await ctx.answerCbQuery();
   } catch (error) {
     console.error("Хатолик:", { error });
     await ctx.answerCbQuery("Хатолик. Кайтадан уриниб кўринг");
