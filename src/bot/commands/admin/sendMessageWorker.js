@@ -16,7 +16,6 @@ async function sendMessageToChunk({ chunks, ad, chatId }) {
         continue;
       }
       await bot.telegram.copyMessage(user._id, chatId, ad.messageId);
-      console.log(`Message sent to user: ${user._id}`);
       await new Promise((resolve) => setTimeout(resolve, 50)); // 50ms delay to manage rate limits
     } catch (error) {
       console.error(`Failed to send message to user: ${user._id}`, error);
