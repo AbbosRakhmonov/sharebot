@@ -52,7 +52,7 @@ const deletePollOption = async (ctx) => {
   } catch (error) {
     console.error("Хатолик:", { error });
     await ctx.answerCbQuery("Хатолик. Кайтадан уриниб кўринг");
-    throw new Error("Хатолик");
+    console.log(error);
   }
 };
 

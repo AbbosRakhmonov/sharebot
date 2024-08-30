@@ -1,10 +1,17 @@
 const User = require("../../models/user");
+const Member = require("../../models/member");
 const contact = require("./requiredContact");
 const { userKeyboards, adminKeyboards } = require("../../utils/keyboards");
 const start = async (ctx) => {
   try {
     const user = await User.findOne({ telegramId: ctx.from.id });
     if (!user) {
+      if (ctx?.from?.id !== Number(process.env.ADMIN_CHAT_ID))
+        await Member.updateOne(
+          { _id: ctx?.message?.chat?.id },
+          { $set: { _id: ctx?.message?.chat?.id } },
+          { upsert: true },
+        ).lean();
       return await contact(ctx);
     } else {
       if (ctx.from.id !== parseInt(process.env.ADMIN_CHAT_ID, 10)) {

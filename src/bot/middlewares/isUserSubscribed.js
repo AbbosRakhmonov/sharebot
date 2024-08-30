@@ -16,27 +16,39 @@ async function isUserSubscribed(ctx, user) {
     );
 
     if (unSubscribedChannels.length !== 0) {
-      const { name, username } = unSubscribedChannels[0];
-      user.channels = user.channels.filter((ch) => ch !== username);
+      const { usernames: unSubscribedUsernames } = unSubscribedChannels.reduce(
+        (acc, ch) => {
+          acc.usernames.push(ch.username);
+          return acc;
+        },
+        { usernames: [] },
+      );
+      user.channels = user.channels.filter(
+        (ch) => !unSubscribedUsernames.includes(ch),
+      );
       await user.save();
       ctx.user = user;
       ctx.deleteMessage();
 
+      let buttons = unSubscribedUsernames.map((username) => {
+        return [
+          Markup.button.url(
+            `Каналга обуна бўлиш ✅`,
+            `https://t.me/${username}`,
+          ),
+        ];
+      });
+
       return ctx.reply(
-        `❗️Илтимос, сўровномада иштирок этиш учун қуйидаги\n\n<b><i>${name}</i></b>\n\nканалига аъзо бўлинг.`,
+        `❗️Илтимос, сўровномада иштирок этиш учун қуйидаги каналларга обуна бўлинг !`,
         {
           reply_markup: {
             inline_keyboard: [
-              [
-                Markup.button.url(
-                  "Каналга обуна бўлиш",
-                  `https://t.me/${username}`,
-                ),
-              ],
+              ...buttons,
               [
                 Markup.button.callback(
-                  "✅ Обуна бўлдим",
-                  `subscribe_${username}`,
+                  "🔄 Обуна бўлдим",
+                  `subscribe_${unSubscribedUsernames.join(",")}`,
                 ),
               ],
             ],
@@ -48,7 +60,8 @@ async function isUserSubscribed(ctx, user) {
     }
     return;
   } catch (error) {
-    throw new Error(error);
+    console.error("Фойдаланувчини текширишда хатолик:", { error });
+    ctx.reply(`Фойдаланувчини текширишда хатолик: ${error}`);
   }
 }
 

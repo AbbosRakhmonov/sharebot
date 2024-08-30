@@ -11,7 +11,6 @@ async function isBotAdminInChannel(ctx, next) {
   } catch (error) {
     console.error("Ботни каналдаги ўрнини текширишда хатолик:", { error });
     ctx.reply(`Ботни каналдаги ўрнини текширишда хатолик: ${error}`);
-    throw new Error("Ботни каналдаги ўрнини текширишда хатолик");
   }
 }
 

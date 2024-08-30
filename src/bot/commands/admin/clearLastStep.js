@@ -14,6 +14,10 @@ const clearLastStep = async (ctx) => {
         tempPollOption: "",
       },
     ).lean();
+
+    const user = await User.findOne({ telegramId: ctx.from.id }).lean();
+    ctx.user = user;
+
     return await ctx.reply("Буйруқ бекор қилинди", {
       reply_markup: {
         keyboard: adminKeyboards,

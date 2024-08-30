@@ -11,7 +11,7 @@ const createPoll = require("./commands/admin/createPoll");
 const checkIsAdmin = require("./middlewares/isAdmin");
 const clearLastStep = require("./commands/admin/clearLastStep");
 const doneCommand = require("./commands/admin/doneCommand");
-const contact = require("./commands/requiredContact");
+// const contact = require("./commands/requiredContact");
 const addTempPollTitle = require("./commands/admin/addTempPollTitle");
 const addPollData = require("./commands/admin/addPollData");
 const addPollOption = require("./commands/admin/addPollOption");
@@ -33,6 +33,14 @@ const deleteChannel = require("./commands/admin/deleteChannel");
 const checkIsUserBot = require("./middlewares/checkIsUserBot");
 const refreshCaptcha = require("./commands/user/refreshCaptcha");
 const continueVoting = require("./commands/user/continueVoting");
+const listAds = require("./commands/admin/ads");
+const addAd = require("./commands/admin/addAd");
+const addTempAdTitle = require("./commands/admin/addTempAdTitle");
+const addAdTempContent = require("./commands/admin/addAdTempContent");
+const seeAd = require("./commands/admin/seeAd");
+const changeAdActive = require("./commands/admin/changeAdActive");
+const deleteAd = require("./commands/admin/deleteAd");
+const publishAd = require("./commands/admin/publishAd");
 
 require("dotenv").config();
 
@@ -48,11 +56,11 @@ const bot = new Telegraf(process.env.BOT_TOKEN);
 console.log(process.env.BOT_TOKEN, process.env.NODE_ENV);
 
 // Middlewares
-bot.use(session());
-bot.use(tracker);
-bot.use(auth);
 bot.use(rateLimit(limitConfig));
+bot.use(tracker);
+bot.use(session());
 bot.use(checkIsUserBot);
+bot.use(auth);
 // check bot blocked or not by user
 // bot.use(async (ctx, next) => {
 //   try {
@@ -77,11 +85,11 @@ bot.use(checkIsUserBot);
 // });
 
 // Error handling
-bot.catch(async (err, ctx) => {
-  console.error(`Ботда ноодатий хатолик юз берди ${ctx.updateType}`, err);
-  await ctx.reply("Ботда ноодатий хатолик юз берди, кайтадан уриниб кўринг");
-  process.exit(1);
-});
+// bot.catch(async (err, ctx) => {
+//   console.error(`Ботда ноодатий хатолик юз берди`, err);
+//   await ctx.reply("Ботда ноодатий хатолик юз берди, кайтадан уриниб кўринг");
+//   process.exit(1);
+// });
 
 // Register commands
 bot.command("start", startCommand);
@@ -93,6 +101,7 @@ bot.on(message("contact"), saveContact);
 bot.hears("Овоз бериш", voteToPoll);
 bot.hears("Барча сўровномалар", checkIsAdmin, listPolls);
 bot.hears("Сўровнома яратиш", checkIsAdmin, createPoll);
+bot.hears("Рекламалар", checkIsAdmin, listAds);
 bot.hears("Каналлар", checkIsAdmin, getAllChannels);
 bot.hears("Cancel ❌", checkIsAdmin, clearLastStep);
 bot.hears("Done ✅", checkIsAdmin, doneCommand);
@@ -112,6 +121,12 @@ bot.on(["message", "edited_message"], async (ctx, next) => {
     case "add-channel":
       await checkIsAdmin(ctx, next);
       return await saveChannel(ctx);
+    case "add-ad-title":
+      await checkIsAdmin(ctx, next);
+      return await addTempAdTitle(ctx);
+    case "add-ad-content":
+      await checkIsAdmin(ctx, next);
+      return await addAdTempContent(ctx);
     default:
       break;
   }
@@ -142,5 +157,11 @@ bot.action(/subscribe_/, subscribe);
 bot.action(/add-channel/, checkIsAdmin, addChannel);
 bot.action(/delete-channel_/, checkIsAdmin, deleteChannel);
 bot.action(/refresh_captcha/, refreshCaptcha);
+// ads
+bot.action(/add-ad/, checkIsAdmin, addAd);
+bot.action(/see-ad_/, checkIsAdmin, seeAd);
+bot.action(/delete-ad_/, checkIsAdmin, deleteAd);
+bot.action(/change-ad-active_/, checkIsAdmin, changeAdActive);
+bot.action(/publish-ad_/, checkIsAdmin, publishAd);
 
 module.exports = bot;

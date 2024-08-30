@@ -1,6 +1,5 @@
 const contact = require("../requiredContact");
 const User = require("../../../models/user");
-const isUserSubscribed = require("../../middlewares/isUserSubscribed");
 
 const checkUserSubscribtion = async (ctx, channel) => {
   try {
@@ -16,36 +15,37 @@ const checkUserSubscribtion = async (ctx, channel) => {
     return false;
   } catch (error) {
     console.error("Хатолик:", { error });
-    throw new Error(error);
+    ctx.reply("Хатолик юз берди. Кайтадан уриниб кўринг");
   }
 };
 
 const subscribe = async (ctx) => {
   try {
-    const channel = ctx.callbackQuery.data.split("_")[1];
+    const channelsString = ctx.callbackQuery.data.split("_")[1];
+    const channels = channelsString.split(",");
     const user = await User.findOne({ telegramId: ctx.from.id });
 
     if (!user) {
       return await contact(ctx);
     }
 
-    const isSubscribed = await checkUserSubscribtion(ctx, channel);
+    const res = await Promise.all(
+      channels.map(
+        async (channel) => await checkUserSubscribtion(ctx, channel),
+      ),
+    );
 
-    if (isSubscribed) {
-      return await ctx.answerCbQuery("Сиз каналга обуна бўлишингиз керак");
+    if (res.includes(true)) {
+      return await ctx.answerCbQuery("Илтимос, каналга обуна бўлинг!", {
+        show_alert: true,
+      });
     }
 
-    user.channels = [...user.channels, channel];
+    user.channels = [...new Set([...user.channels, ...channels])];
 
     await user.save();
 
     ctx.user = user;
-
-    const res = await isUserSubscribed(ctx, user);
-
-    if (res) {
-      return;
-    }
 
     await ctx.deleteMessage();
     return await ctx.answerCbQuery(
