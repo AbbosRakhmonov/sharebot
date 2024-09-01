@@ -12,14 +12,15 @@ async function sendMessageToChunk({ chunks, ad, chatId }) {
         user._id,
       );
 
+      console.log(chatMember);
+
       if (chatMember.status === "left" || chatMember.status === "kicked") {
         continue;
       }
       await bot.telegram.copyMessage(user._id, chatId, ad.messageId);
       await new Promise((resolve) => setTimeout(resolve, 50)); // 50ms delay to manage rate limits
     } catch (error) {
-      console.error(`Failed to send message to user: ${user._id}`, error);
-      throw new Error(error);
+      console.log(error);
     }
   }
 }

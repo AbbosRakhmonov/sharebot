@@ -1294,3 +1294,12 @@
 2024-08-30T21:44:21.523Z [info] Abbos - Update type: callback_query, response time: 725ms 
 2024-08-30T21:44:41.423Z [info] Abbos - Update type: message, response time: 225ms 
 2024-08-30T21:44:44.420Z [info] Abbos - Update type: callback_query, response time: 1214ms 
+2024-09-01T17:40:10.932Z [info] Merskvich - Update type: my_chat_member, response time: 6ms 
+2024-09-01T17:40:21.206Z [info] Abbos - Update type: message, response time: 228ms 
+2024-09-01T17:40:25.430Z [info] Abbos - Update type: callback_query, response time: 1657ms 
+2024-09-01T17:43:45.389Z [info] Abbos - Update type: callback_query, response time: 1261ms 
+2024-09-01T17:44:46.309Z [info] Abbos - Update type: callback_query, response time: 1268ms 
+2024-09-01T17:45:11.846Z [info] Abbos - Update type: callback_query, response time: 1652ms 
+2024-09-01T17:45:26.346Z [info] Abbos - Update type: callback_query, response time: 1327ms 
+2024-09-01T17:45:50.430Z [info] Abbos - Update type: message, response time: 230ms 
+2024-09-01T17:45:52.379Z [info] Abbos - Update type: callback_query, response time: 873ms 
